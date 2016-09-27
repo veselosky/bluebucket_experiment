@@ -1,0 +1,10 @@
+docopt
+jsonschema
+jmespath
+markdown
+pyembed
+pyembed-markdown
+python-dateutil
+python-slugify
+pytz
+

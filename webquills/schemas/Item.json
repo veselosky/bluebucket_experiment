@@ -76,7 +76,6 @@
         "Item": {
             "type": "object",
             "required": [
-                "archetype",
                 "contenttype",
                 "guid",
                 "itemtype",
