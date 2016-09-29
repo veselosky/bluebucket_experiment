@@ -17,19 +17,33 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
+import json
 import string
 import uuid
 from datetime import datetime
+from io import open
 
+import jsonschema
 import markdown
+import pkg_resources
 import pytz
 from dateutil.parser import parse as parse_date
 from markdown.extensions.toc import TocExtension
 
-from webquills.util import slugify
+from webquills.util import slugify, is_sequence
+
+category_seo_msg = '''
+For SEO, please assign a keyword-rich category like "keyword/seo" above.
+It will be used to generate a URL. Category will be inferred from the
+file path otherwise. Recommendations:
+
+Title: <75 characters
+Url: <90 characters (category + slug)
+Description: <160 characters
+'''
 
 
-def new_markdown(item_type, title=None, **kwargs):
+def new_markdown(config, item_type, title=None, **kwargs):
     """quill new <itemtype> [<title>]
 
         Generates a new markdown file from a template based on the requested
@@ -40,22 +54,21 @@ def new_markdown(item_type, title=None, **kwargs):
     # Some defaults
     now = datetime.now()
     # FIXME Get TZ from config, default to something reasonable
-    now = pytz.timezone('America/New_York').localize(now)
+    now = pytz.timezone('America/New_York').localize(now).isoformat(
+        ).replace("+00:00", "Z")
     text = ""
 
     metas = ['itemtype: %s' % item_type, 'guid: %s' % uuid.uuid4()]
     for key in kwargs:
         metas.append('%s: %s' % (key, kwargs[key]))
     if 'created' not in kwargs:
-        metas.append('updated: %s' % now.isoformat())
+        metas.append('created: %s' % now)
     if 'updated' not in kwargs:
-        metas.append('updated: %s' % now.isoformat())
+        metas.append('updated: %s' % now)
+    if 'published' not in kwargs:
+        metas.append('published: %s' % now)
     if 'category' not in kwargs:
-        text += '''
-        For SEO, please assign a keyword-rich category like "keyword/seo" above.
-        It will be used to generate a URL. Category will be inferred from the
-        file path otherwise.
-        '''
+        text += category_seo_msg
 
     if title:
         metas.append('slug: %s' % slugify(title))
@@ -67,7 +80,7 @@ def new_markdown(item_type, title=None, **kwargs):
     return "\n".join(metas) + "\n\n" + text
 
 
-def md2archetype(mtext, extensions=None):
+def md2archetype(config, mtext, extensions=None):
     """
     Markdown to JSON.
 
@@ -78,8 +91,7 @@ def md2archetype(mtext, extensions=None):
         -x --extension=EXT      A python-markdown extension module to load.
 
     """
-    # FIXME Get TZ from config, default to something reasonable
-    zone = pytz.timezone('America/New_York')
+    zone = pytz.timezone(config.get("site", {}).get("timezone", "UTC"))
     default_extensions = [
         'markdown.extensions.extra',
         'markdown.extensions.admonition',
@@ -89,6 +101,7 @@ def md2archetype(mtext, extensions=None):
         TocExtension(permalink=True),  # replaces headerId
         'pyembed.markdown'
     ]
+    # TODO get extensions from config
     if extensions is None:
         extensions = []
     extensions = set(extensions + default_extensions)
@@ -97,54 +110,70 @@ def md2archetype(mtext, extensions=None):
                            lazy_ol=False)
 
     html = md.convert(mtext)
-    metadata = md.Meta
-    if not metadata:
-        # FIXME This error message is embarassing. Fix it.
-        raise TypeError('Missing required metadata')
-    # The metadata needs clean up, because:
-    # 1. meta ext reads everything as a list, but most values should be scalar
-    # 2. because humans are sloppy, we parse and normalize date values
-    itemmeta = {"contenttype": "text/html; charset=utf-8"}
+    # TODO (Someday) Extract headline from the HTML body for meta
+
+    # hard coded defaults
+    itemmeta = {
+        "contenttype": "text/html; charset=utf-8",
+        "itemtype": "Item/Page"
+    }
+    # User configurable defaults
+    metadata = config.get("item_defaults", {})
+    # Actual document metadata
+    metadata.update(md.Meta)
+
     # Here we implement some special case transforms for data that may need
     # cleanup or is hard to encode using markdown's simple format.
     for key, value in metadata.items():
-        if key in ['created', 'date', 'published', 'updated']:
+        if is_sequence(value) and len(value) == 1:
+            value = value[0]
+        if key in ['created', 'published', 'updated']:
             # because humans are sloppy, we parse and normalize date values
-            dt = parse_date(value[0])
+            dt = parse_date(value)
             if dt.tzinfo:
                 dt = dt.astimezone(zone)
             else:
                 dt = zone.localize(dt)
             if key == 'date':  # Legacy DC.date, convert to specific
                 key = 'published'
-            itemmeta[key] = dt.isoformat()
+            itemmeta[key] = dt.isoformat().replace("+00:00", "Z")
 
         elif key == 'itemtype':
-            itemmeta['itemtype'] = string.capwords(metadata['itemtype'][0], '/')
+            itemmeta['itemtype'] = string.capwords(value, '/')
 
         elif key == 'author':
             itemmeta["attribution"] = [
-                {"role": "author", "name": metadata[key][0]}]
+                {"role": "author", "name": value}]
 
         elif key == "copyright":  # Typical usage provides only notice
-            itemmeta["rights"] = {"copyright_notice": metadata[key][0]}
+            itemmeta["rights"] = {"copyright_notice": value}
+        # FIXME License logic a mess. Replace w/symbol lookup (e.g. CC-BY)
         elif key.startswith("rights-"):
             if "rights" not in itemmeta:
                 itemmeta["rights"] = {}
-            itemmeta["rights"][key[7:]] = metadata[key][0]
+            newkey = key[7:]
+            if newkey == "license":
+                itemmeta["rights"]["license"] = {"href": value}
+            else:
+                itemmeta["rights"][newkey] = value
 
         elif key == "category":  # Typical usage provides only name
-            itemmeta["category"] = {"name": metadata[key][0]}
+            itemmeta["category"] = {"name": value}
         elif key.startswith("category-"):
             if "category" not in itemmeta:
                 itemmeta["category"] = {}
-            itemmeta["category"][key[9:]] = metadata[key][0]
+            itemmeta["category"][key[9:]] = value
 
         else:
-            # reads everything as list, but most values should be scalar
-            itemmeta[key] = value[0] if len(value) == 1 else value
+            itemmeta[key] = value
 
     itemmeta['published'] = itemmeta.get('published') or itemmeta.get('updated')
     itemmeta['updated'] = itemmeta.get('updated') or itemmeta.get('published')
 
-    return {"Item": itemmeta, "Article": {"body": html}}
+    archetype = {"Item": itemmeta, "Article": {"body": html}}
+    schemafile = pkg_resources.resource_filename('webquills.schemas',
+                                                'Item.json')
+    with open(schemafile, encoding="utf-8") as f:
+        schema = json.load(f)
+    jsonschema.validate(archetype, schema)  # Raises ValidationError
+    return archetype

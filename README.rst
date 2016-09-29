@@ -9,10 +9,18 @@ webquills
         :target: https://pypi.python.org/pypi/webquills
 
 
-Tools I use to make static websites
+Tools I use to make static websites.
 
 Features
 =======================================================================
+
+Install the command line client `quill` to execute commands.
+
+* quill startproject: generate a project makefile and webquills.ini
+* quill new: create a new markdown file with required metadata
+* quill md2json: convert a markdown file to a JSON archetype
+* quill j2: render a Jinja2 template using the given JSON files as context
+* quill indexitems: create a JSON index of the given archetype files
 
 Naming conventions for JSON schemas:
 
@@ -24,3 +32,6 @@ Naming conventions for JSON schemas:
 Task List
 =======================================================================
 
+[ ] Implement quill startproject to bootstrap makefile and webquills.ini
+[ ] Implement quill j2 to render templates
+[ ] Implement quill indexitems to create json index

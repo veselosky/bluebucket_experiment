@@ -61,6 +61,7 @@ setup(
     package_dir={'webquills':
                  'webquills'},
     include_package_data=True,
+    entry_points={'console_scripts': ['quill = webquills.quill:main']},
     install_requires=requirements,
     license=about['__license__'],
     zip_safe=False,

@@ -81,8 +81,7 @@
                 "itemtype",
                 "published",
                 "rights",
-                "title",
-                "updated"
+                "title"
             ],
             "properties":{
                 "attribution": {

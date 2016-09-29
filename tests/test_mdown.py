@@ -34,6 +34,16 @@ Testing 0
 This is a plain old markdown doc wth no metadata.
 """
 
+mdoc_missing_required = """Itemtype: Item/Page/Article
+Author: Vince Veselosky
+Title: A Test Article
+
+Testing 0.1
+=============
+
+Testing the heck out of this markdown stuff!
+"""
+
 mdoc_required_meta = """Itemtype: Item/Page/Article
 GUID: 25cf55b5-345e-48e3-86ae-bc6c186f0fb1
 Author: Vince Veselosky
@@ -65,12 +75,17 @@ Testing the heck out of this markdown stuff!
 
 
 def test_md2archetype_nometa():
-    with pytest.raises(TypeError):
-        md2archetype(mdoc_nometa)
+    with pytest.raises(jsonschema.ValidationError):
+        md2archetype({}, mdoc_nometa)
+
+
+def test_md2archetype_missing_required():
+    with pytest.raises(jsonschema.ValidationError):
+        md2archetype({}, mdoc_missing_required)
 
 
 def test_md2archetype_required_meta():
-    testdata = md2archetype(mdoc_required_meta)
+    testdata = md2archetype({}, mdoc_required_meta)
 
     # raises ValidationError if not valid
     jsonschema.validate(testdata, schema)
@@ -78,7 +93,8 @@ def test_md2archetype_required_meta():
 
 
 def test_md2archetype_override_defaults():
-    testdata = md2archetype(mdoc_override_defaults)
+    testdata = md2archetype({"site": {"timezone": "America/New_York"}},
+                            mdoc_override_defaults)
 
     # raises ValidationError if not valid
     jsonschema.validate(testdata, schema)

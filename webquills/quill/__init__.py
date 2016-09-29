@@ -27,9 +27,14 @@ Options:
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import json
 import sys
 from io import open
 from os import path
+try:  # In Python 3 ConfigParser was renamed, and "safe" became the default
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import SafeConfigParser as ConfigParser
 
 from docopt import docopt
 
@@ -37,25 +42,31 @@ from webquills.quill.mdown import new_markdown, md2archetype
 from webquills.util import SmartJSONEncoder
 
 
+def configure(args):
+    # TODO (maybe) Some args might get copied to config
+    cfg = ConfigParser()
+    cfg.read('webquills.ini')
+    config = {}
+    for section in cfg:
+        config[section.lower()] = dict(cfg[section].items())
+
+    return config
+
+
 # MAIN: Dispatch to individual handlers
 def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
     item_types = {"article": "Item/Page/Article", "page": "Item/Page"}
-
-    # TODO Use a webquills.ini to set settings/options
-    args = []
-    if path.exists('webquills.conf'):
-        with open('webquills.conf', encoding='utf-8') as f:
-            args = f.read().split()
-    args.extend(sys.argv[1:])
-
-    logger.debug(repr(args))
-    param = docopt(__doc__, argv=args, options_first=True)
-    logger.warn(repr(param))
+    # Parse out the command and default options. Command options will be
+    # parsed later.
+    param = docopt(__doc__, options_first=True)
+    config = configure(param)
+    # logger.info(repr(config))
 
     if param['new']:
-        print(new_markdown(item_types[param['ITEMTYPE'].lower()],
+        # TODO (someday) Prompt user for metadata values
+        print(new_markdown(config, item_types[param['ITEMTYPE'].lower()],
                            title=param['TITLE']))
 
     elif param['md2json']:
@@ -63,7 +74,7 @@ def main():
         with open(arguments['<infile>'], encoding='utf-8') as infile:
             mtext = infile.read()
 
-        metadict = md2archetype(mtext, arguments['--extension'])
+        metadict = md2archetype(config, mtext, arguments['--extension'])
 
         if arguments['<outfile>']:
             outfile = open(arguments['<outfile>'], 'w')
