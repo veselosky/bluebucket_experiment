@@ -18,6 +18,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import datetime
 import json
+import re
 import string
 import uuid
 from datetime import datetime
@@ -112,7 +113,7 @@ def md2archetype(config, mtext, extensions=None):
     html = md.convert(mtext)
     # TODO (Someday) Extract headline from the HTML body for meta
 
-    # hard coded defaults
+    # hard coded defaults: markdown can only represent HTML pages
     itemmeta = {
         "contenttype": "text/html; charset=utf-8",
         "itemtype": "Item/Page"
@@ -127,7 +128,7 @@ def md2archetype(config, mtext, extensions=None):
     for key, value in metadata.items():
         if is_sequence(value) and len(value) == 1:
             value = value[0]
-        if key in ['created', 'published', 'updated']:
+        if key in ['created', 'date', 'published', 'updated']:
             # because humans are sloppy, we parse and normalize date values
             dt = parse_date(value)
             if dt.tzinfo:
@@ -145,17 +146,11 @@ def md2archetype(config, mtext, extensions=None):
             itemmeta["attribution"] = [
                 {"role": "author", "name": value}]
 
-        elif key == "copyright":  # Typical usage provides only notice
-            itemmeta["rights"] = {"copyright_notice": value}
+        elif key == "license":
         # FIXME License logic a mess. Replace w/symbol lookup (e.g. CC-BY)
-        elif key.startswith("rights-"):
-            if "rights" not in itemmeta:
-                itemmeta["rights"] = {}
-            newkey = key[7:]
-            if newkey == "license":
-                itemmeta["rights"]["license"] = {"href": value}
-            else:
-                itemmeta["rights"][newkey] = value
+            if "links" not in itemmeta:
+                itemmeta["links"] = []
+            itemmeta["links"].append({"href": value, "rel": "license"})
 
         elif key == "category":  # Typical usage provides only name
             itemmeta["category"] = {"name": value}
@@ -170,7 +165,11 @@ def md2archetype(config, mtext, extensions=None):
     itemmeta['published'] = itemmeta.get('published') or itemmeta.get('updated')
     itemmeta['updated'] = itemmeta.get('updated') or itemmeta.get('published')
 
-    archetype = {"Item": itemmeta, "Article": {"body": html}}
+    if re.match(r'\bArticle\b', itemmeta["itemtype"]):
+        archetype = {"Item": itemmeta, "Article": {"body": html}}
+    else:
+        archetype = {"Item": itemmeta, "Page": {"text": html}}
+
     schemafile = pkg_resources.resource_filename('webquills.schemas',
                                                 'Item.json')
     with open(schemafile, encoding="utf-8") as f:

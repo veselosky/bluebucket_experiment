@@ -1,3 +1,5 @@
+colorama
+colorlog
 docopt
 jsonschema
 jmespath
@@ -7,4 +9,4 @@ pyembed-markdown
 python-dateutil
 python-slugify
 pytz
-
+pyyaml

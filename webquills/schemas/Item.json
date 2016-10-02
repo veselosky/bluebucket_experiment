@@ -56,34 +56,18 @@
                 "sort": {"type": "string", "description": "for lexical sort"}
             }
         },
-        "rights": {
-            "required": ["copyright_notice"],
-            "properties": {
-                "copyright_notice": {"type": "string"},
-                "copyright_holder": {
-                    "type": "object",
-                    "description": "Person or organization who owns the copyright",
-                    "anyOf": [
-                        {"$ref": "#/definitions/person"},
-                        {"$ref": "#/definitions/organization"}
-                    ]
-                },
-                "copyright_year": {"type": "number"},
-                "license": {"$ref": "#/definitions/link"},
-                "usage_terms": {"type": "string"}
-            }
-        },
         "Item": {
             "type": "object",
             "required": [
                 "contenttype",
+                "copyright",
                 "guid",
                 "itemtype",
                 "published",
-                "rights",
                 "title"
             ],
             "properties":{
+                "archetype": {"$ref": "#/definitions/link"},
                 "attribution": {
                     "description": "Byline or author/contributor credits",
                     "type": "array",
@@ -95,20 +79,27 @@
                     }
                 },
                 "category": {"$ref": "#/definitions/category"},
+                "contenttype": {"type": "string"},
+                "copyright": {"type": "string"},
+                "copyright_holder": {
+                    "type": "object",
+                    "description": "Person or organization who owns the copyright",
+                    "anyOf": [
+                        {"$ref": "#/definitions/person"},
+                        {"$ref": "#/definitions/organization"}
+                    ]
+                },
                 "created": {"type": "string", "format": "date-time"},
                 "description": {"type": "string"},
+                "guid": {"type": "string", "format": "uri"},
+                "itemtype": {"type": "string"},
+                "links": {"$ref": "#/definitions/linklist"},
                 "published": {"type": "string", "format": "date-time"},
                 "rights": {"$ref": "#/definitions/rights"},
                 "slug": {"type": "string"},
                 "thumbnail": {"$ref": "#/definitions/link"},
                 "title": {"type": "string"},
-                "updated": {"type": "string", "format": "date-time"},
-
-                "archetype": {"$ref": "#/definitions/link"},
-                "contenttype": {"type": "string"},
-                "guid": {"type": "string", "format": "uri"},
-                "itemtype": {"type": "string"},
-                "links": {"$ref": "#/definitions/linklist"}
+                "updated": {"type": "string", "format": "date-time"}
             }
         },
         "Page": {

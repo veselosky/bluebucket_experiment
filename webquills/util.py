@@ -15,11 +15,15 @@
 #   limitations under the License.
 #
 from __future__ import absolute_import, print_function, unicode_literals
+
 import datetime
-from gzip import GzipFile
-from io import BytesIO
+import logging
 import json
 import posixpath as path
+from gzip import GzipFile
+from io import BytesIO
+
+import colorlog
 import slugify as sluglib
 
 
@@ -51,6 +55,21 @@ def change_ext(key, ext):
     if not ext.startswith('.'):
         ext = '.' + ext
     return path.splitext(key)[0] + ext
+
+
+# Ugh! Why does logging have to be so damned hard?
+def getLogger():
+    # TODO get verbosity from params
+    handler = colorlog.StreamHandler()
+    handler.setFormatter(colorlog.ColoredFormatter(
+        '%(log_color)s%(levelname)s: %(message)s', log_colors={
+            'DEBUG': 'white', 'INFO': 'cyan', 'WARNING': 'yellow',
+            'ERROR': 'red', 'CRITICAL': 'red,bg_white',
+        }, ))
+    logger = colorlog.getLogger('webquills')
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
 
 
 def gzip(content, filename=None, compresslevel=9, mtime=None):

@@ -15,11 +15,13 @@
 #   limitations under the License.
 #
 from __future__ import absolute_import, print_function, unicode_literals
-import pkg_resources
+
 import json
+
 import jsonschema
+import pkg_resources
 import pytest
-from webquills.quill.mdown import md2archetype, new_markdown
+from webquills.mdown import md2archetype
 
 schemafile = pkg_resources.resource_filename('webquills.schemas',
                                              'Item.json')
