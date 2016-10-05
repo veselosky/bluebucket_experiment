@@ -20,11 +20,23 @@ WebQuills command line interface.
 Usage:
     quill new [-o OUTFILE] ITEMTYPE [TITLE]
     quill md2json [-x EXT...] [-o OUTFILE] INFILE
+    quill md2json -i FILES...
     quill j2 -t DIR [-o OUTFILE] TEMPLATE [VARFILES...]
+    quill index (-o OUTFILE | -A OUTFILE) JSON...
+    quill render -t DIR [-c CONTEXT]... JSON...
 
 Options:
-    -o --outfile OUTFILE    File to write output. Defaults to STDOUT.
-    -t --templatedir DIR    Directory where templates are stored. TEMPLATE
+    -A --addto=OUTFILE      For the index command, the output file will be
+                            read and extended with new data, not overwritten. It
+                            will be created if it does not exist.
+    -c --context CONTEXT    CONTEXT is a JSON file that will be added to the
+                            template context for each template rendered. If
+                            given multiple times, all files are added.
+    -i --inplace            Use input filename to determine output filename.
+    -o --outfile=OUTFILE    File to write output. Defaults to STDOUT.
+                            If the destination file exists, it will be
+                            overwritten.
+    -t --templatedir=DIR    Directory where templates are stored. TEMPLATE
                             path should be relative to this.
     -x --extension=EXT      A python-markdown extension module to load.
 
@@ -33,22 +45,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
 import json
-import logging
 import sys
+from configparser import ConfigParser
 from io import open
 
 import jsonschema
-
-try:  # In Python 3 ConfigParser was renamed, and "safe" became the default
-    from configparser import ConfigParser
-except ImportError:
-    from ConfigParser import SafeConfigParser as ConfigParser
-
-from docopt import docopt
-
-from webquills.mdown import new_markdown, md2archetype
+import webquills.indexer as indexer
 import webquills.j2 as j2
-from webquills.util import SmartJSONEncoder, getLogger
+from docopt import docopt
+from webquills.mdown import md2archetype, new_markdown
+from webquills.util import SmartJSONEncoder, getLogger, change_ext
 
 
 def configure(args):
@@ -81,18 +87,38 @@ def main():
     # parsed later.
     param = docopt(__doc__)
     config = configure(param)
-    # logger.info(repr(config))
-
-    # Prepare the output file handle
-    if param['--outfile']:
-        outfile = open(param['--outfile'], 'w')
-    else:
-        outfile = sys.stdout
+    # logger.debug(repr(config))
+    # logger.debug(repr(param))
 
     if param['new']:
         # TODO (someday) Prompt user for metadata values
-        outfile.write(new_markdown(config, item_types[param[
-            'ITEMTYPE'].lower()], title=param['TITLE']))
+        doc = new_markdown(config, item_types[param['ITEMTYPE'].lower()],
+                           title=param['TITLE'])
+        # Prepare the output file handle
+        if param['--outfile']:
+            with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
+                outfile.write(doc)
+        else:
+            print(doc)
+
+    elif param['md2json'] and param["--inplace"]:
+        for filename in param["FILES"]:
+            target = change_ext(filename, '.json')
+            logger.info("Processing %s" % target)
+            with open(filename, encoding="utf-8") as f:
+                mtext = f.read()
+            try:
+                metadict = md2archetype(config, mtext, param['--extension'])
+            except jsonschema.ValidationError as e:
+                # spits out a screwy error, make it more obvious
+                lines = str(e).splitlines()
+                message = lines.pop(0) + "\n"
+                detail = "\n".join(lines) + "\n"
+                logger.info(detail)
+                logger.error("in %s: %s" % (filename, message))
+                continue
+            with open(target, 'w', encoding="utf-8") as outfile:
+                json.dump(metadict, outfile, cls=SmartJSONEncoder)
 
     elif param['md2json']:
         with open(param["INFILE"], encoding='utf-8') as infile:
@@ -106,16 +132,53 @@ def main():
             message = lines.pop(0) +"\n"
             detail = "\n".join(lines) + "\n"
             logger.info(detail)
-            logger.error(message)
+            logger.error("in %s: %s" % (param["INFILE"], message))
             exit(1)
 
-        json.dump(metadict, outfile, sort_keys=True, indent=2, cls=SmartJSONEncoder)
+        # Prepare the output file handle
+        if param['--outfile']:  # If to file, use compact representation
+            with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
+                json.dump(metadict, outfile, cls=SmartJSONEncoder)
+        else:  # If stdout, pretty print
+            json.dump(metadict, sys.stdout, sort_keys=True, indent=2,
+                      cls=SmartJSONEncoder)
 
     elif param["j2"]:
         context = copy.deepcopy(config)
         for varfile in param['VARFILES']:
             context.update(j2.loadfile(varfile))
-        outfile.write(j2.render(config, context, param["TEMPLATE"]))
+        doc = j2.render(config, context, param["TEMPLATE"])
+        if param['--outfile']:
+            with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
+                outfile.write(doc)
+        else:
+            print(doc)
 
-    if outfile is not sys.stdout:
-        outfile.close()
+    elif param["index"]:
+        index = {}
+        if param["--addto"]:
+            target = param["--addto"]
+            try:
+                with open(target, encoding="utf-8") as the_index:
+                    index = json.load(the_index)
+            except FileNotFoundError as e:
+                logger.info("File does not exist. Creating: %s" % target)
+                pass
+        elif param['--outfile']:
+            target = param['--outfile']
+
+        for infile in param["JSON"]:
+            try:
+                with open(infile, encoding="utf-8") as handle:
+                    data = json.load(handle)
+            except Exception as e:
+                logger.info(str(e))
+                logger.error("File could not be parsed: %s" % infile)
+                continue
+            index = indexer.add_to_index(index, data)
+        if target:  # If to file, use compact representation
+            with open(target, 'w', encoding="utf-8") as outfile:
+                json.dump(index, outfile, cls=SmartJSONEncoder)
+        else:  # If stdout, pretty print
+            json.dump(index, sys.stdout, sort_keys=True, indent=2,
+                          cls=SmartJSONEncoder)

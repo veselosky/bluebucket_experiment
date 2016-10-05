@@ -25,13 +25,7 @@ Install the command line client `quill` to execute commands.
 Naming conventions for JSON schemas:
 
 * Itemtypes use first caps
-* Use underscores as word separators, to ensure that all JSON keys are valid python identifiers. Otherwise they will
-  not be easily accessible in template contexts. Also worth noting that python-markdown's metadata extension rejects
+* Use underscores as word separators, to ensure that all JSON keys are valid
+  python identifiers. Otherwise they will not be easily accessible in template
+  contexts. Also worth noting that python-markdown's metadata extension rejects
   entirely any keys that contain dots (but dashes work).
-
-Task List
-=======================================================================
-
-[ ] Implement quill startproject to bootstrap makefile and webquills.ini
-[ ] Implement quill j2 to render templates
-[ ] Implement quill indexitems to create json index

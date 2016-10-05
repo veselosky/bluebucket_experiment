@@ -146,8 +146,11 @@ def md2archetype(config, mtext, extensions=None):
             itemmeta["attribution"] = [
                 {"role": "author", "name": value}]
 
+        elif key == 'tags':
+            itemmeta[key] = value.lower().split()
+
         elif key == "license":
-        # FIXME License logic a mess. Replace w/symbol lookup (e.g. CC-BY)
+            # FIXME License logic a mess. Replace w/symbol lookup (e.g. CC-BY)
             if "links" not in itemmeta:
                 itemmeta["links"] = []
             itemmeta["links"].append({"href": value, "rel": "license"})
