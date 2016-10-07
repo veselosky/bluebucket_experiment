@@ -15,7 +15,19 @@
 #   limitations under the License.
 #
 from __future__ import absolute_import, print_function, unicode_literals
+import webquills.j2 as j2
 
 
 def test_render():
     pass
+
+
+def test_templates_from_context():
+    context = {
+        "Item": {
+            "itemtype": "Item/Page/Article"
+            }
+        }
+    result = j2.templates_from_context(context)
+    assert result == {"html": ["Item_Page_Article.html.j2", "Item_Page.html.j2",
+                      "Item.html.j2"]}

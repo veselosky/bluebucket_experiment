@@ -14,24 +14,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-"""
-Jinja2 template renderer.
-
-This script will render a jinja2 template to STDOUT. The template context is
-constructed from data files fed to the script.
-
-Usage:
-    j2.py [options] TEMPLATE [VARFILES...]
-
-Options:
-    -r --root ROOT          The path to the "document root" of the web site.
-                            Used to calculate relative URLs.
-    -t --templatedir DIR    Directory where templates are stored. TEMPLATE
-                            path should be relative to this.
-
-Other VARFILES will be merged into the top level template context. They will
-be processed in order, so duplicates are last value wins.
-"""
 from __future__ import absolute_import, print_function, unicode_literals
 
 import jinja2
@@ -53,7 +35,21 @@ def render(config, context, templatename):
     # TODO Hard-coded FSLoader very limiting. Allow other loaders by config.
     # Certainly we will want package loader, possibly S3 loader.
     jinja = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(config["j2"]["templatedir"]))
-    template = jinja.get_template(templatename)
+        loader=jinja2.FileSystemLoader(config["jinja2"]["templatedir"]))
+    template = jinja.get_or_select_template(templatename)
     return template.render(context)
 
+
+def templates_from_context(ctx):
+    # In the webquills.ini, create a jinja2_templates section. Each key is a
+    # filename extension, e.g. "html". The value is a space-separated list of
+    # possible template names. The first template in this list found to exist
+    # will be used to render an output with that extension.
+    # Default HTML templates will be added.
+    templates = ctx.get("jinja2_templates", {})
+    pieces = ctx["Item"].get("itemtype", "Item").split("/")
+    while pieces:
+        templates.setdefault("html", []).append("_".join(pieces) + ".html.j2")
+        pieces.pop()
+    # TODO Allow template overrides
+    return templates

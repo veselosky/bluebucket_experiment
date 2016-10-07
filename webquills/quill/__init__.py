@@ -19,23 +19,25 @@ WebQuills command line interface.
 
 Usage:
     quill new [-o OUTFILE] ITEMTYPE [TITLE]
-    quill md2json [-x EXT...] [-o OUTFILE] INFILE
-    quill md2json -i FILES...
-    quill j2 -t DIR [-o OUTFILE] TEMPLATE [VARFILES...]
-    quill index (-o OUTFILE | -A OUTFILE) JSON...
-    quill render -t DIR [-c CONTEXT]... JSON...
+    quill md2json [-r ROOT] [-x EXT...] [-o OUTFILE] INFILE
+    quill md2json [-r ROOT] -i FILES...
+    quill j2 [-r ROOT] [-t DIR] [-o OUTFILE] TEMPLATE [VARFILES...]
+    quill index [-r ROOT] (-o OUTFILE | -A OUTFILE) JSON...
+    quill render [-r ROOT] [-t DIR] [-c CONTEXT]... JSON...
 
 Options:
     -A --addto=OUTFILE      For the index command, the output file will be
                             read and extended with new data, not overwritten. It
                             will be created if it does not exist.
-    -c --context CONTEXT    CONTEXT is a JSON file that will be added to the
+    -c --context=CONTEXT    CONTEXT is a JSON file that will be added to the
                             template context for each template rendered. If
                             given multiple times, all files are added.
     -i --inplace            Use input filename to determine output filename.
     -o --outfile=OUTFILE    File to write output. Defaults to STDOUT.
                             If the destination file exists, it will be
                             overwritten.
+    -r --root=ROOT          The destination build directory. All calculated
+                            paths will be relative to this directory.
     -t --templatedir=DIR    Directory where templates are stored. TEMPLATE
                             path should be relative to this.
     -x --extension=EXT      A python-markdown extension module to load.
@@ -58,41 +60,39 @@ from webquills.util import SmartJSONEncoder, getLogger, change_ext
 
 
 def configure(args):
-    cfg = ConfigParser()
-    cfg.read('webquills.ini')
-    config = {"new": {}, "md2json": {}, "j2": {}}
-    for section in cfg:
-        config[section.lower()] = dict(cfg[section].items())
+    configurator = ConfigParser()
+    configurator.read('webquills.ini')
+    cfg = {"markdown": {}, "jinja2": {}}
+    for section in configurator:
+        cfg[section.lower()] = dict(configurator[section].items())
 
     # Read from config as space separated string; convert to list
-    if "extensions" in config["md2json"]:
-        config["md2json"]["extensions"] = \
-            config["md2json"]["extensions"].split()
-    else:
-        config["md2json"]["extensions"] = []
-    # Add any extensions requested from command line
-    if "--extension" in args:
-        config["md2json"]["extensions"].append(args["--extension"])
+    cfg["options"]["context"] = cfg["options"].get("context", "").split()
+    cfg["markdown"]["extensions"] = \
+        cfg["markdown"].get("extensions", "").split()
 
-    if "--templatedir" in args:
-        config["j2"]["templatedir"] = args["--templatedir"]
-    return config
+    for arg in args:
+        if arg == "--extension":
+            cfg["markdown"]["extensions"].extend(args["--extension"])
+        elif arg == "--context":
+            cfg["options"]["context"].extend(args["--context"])
+        elif arg.startswith("--"):
+            cfg["options"][arg[2:]] = args[arg]
+    return cfg
 
 
 # MAIN: Dispatch to individual handlers
 def main():
     logger = getLogger()
     item_types = {"article": "Item/Page/Article", "page": "Item/Page"}
-    # Parse out the command and default options. Command options will be
-    # parsed later.
     param = docopt(__doc__)
-    config = configure(param)
-    # logger.debug(repr(config))
+    cfg = configure(param)
+    # logger.info(repr(cfg))
     # logger.debug(repr(param))
 
     if param['new']:
         # TODO (someday) Prompt user for metadata values
-        doc = new_markdown(config, item_types[param['ITEMTYPE'].lower()],
+        doc = new_markdown(cfg, item_types[param['ITEMTYPE'].lower()],
                            title=param['TITLE'])
         # Prepare the output file handle
         if param['--outfile']:
@@ -108,7 +108,8 @@ def main():
             with open(filename, encoding="utf-8") as f:
                 mtext = f.read()
             try:
-                metadict = md2archetype(config, mtext, param['--extension'])
+                metadict = md2archetype(cfg, mtext, cfg["markdown"][
+                    "extensions"])
             except jsonschema.ValidationError as e:
                 # spits out a screwy error, make it more obvious
                 lines = str(e).splitlines()
@@ -125,7 +126,7 @@ def main():
             mtext = infile.read()
 
         try:
-            metadict = md2archetype(config, mtext, param['--extension'])
+            metadict = md2archetype(cfg, mtext, cfg["markdown"]["extensions"])
         except jsonschema.ValidationError as e:
             # spits out a screwy error, make it more obvious
             lines = str(e).splitlines()
@@ -144,15 +145,35 @@ def main():
                       cls=SmartJSONEncoder)
 
     elif param["j2"]:
-        context = copy.deepcopy(config)
+        context = copy.deepcopy(cfg)
         for varfile in param['VARFILES']:
             context.update(j2.loadfile(varfile))
-        doc = j2.render(config, context, param["TEMPLATE"])
+        doc = j2.render(cfg, context, param["TEMPLATE"])
         if param['--outfile']:
             with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
                 outfile.write(doc)
         else:
             print(doc)
+
+    elif param["render"]:
+        base_context = copy.deepcopy(cfg)
+        for varfile in cfg["options"]["context"]:
+            base_context.update(j2.loadfile(varfile))
+
+        for varfile in param['JSON']:
+            logger.info("Processing %s" % varfile)
+            item = j2.loadfile(varfile)
+            if not "Item" in item:
+                logger.warning("Skipping non-Item JSON file: %s" % varfile)
+                continue
+            context = dict(base_context, **item)
+            templates = j2.templates_from_context(context)
+            logger.info(item["Item"]["itemtype"])
+            for key in templates:
+                out = j2.render(cfg, context, templates[key])
+                dest = change_ext(varfile, key)
+                with open(dest, 'w', encoding="utf-8") as outfile:
+                    outfile.write(out)
 
     elif param["index"]:
         index = {}

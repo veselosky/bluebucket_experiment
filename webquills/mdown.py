@@ -105,7 +105,10 @@ def md2archetype(config, mtext, extensions=None):
     # TODO get extensions from config
     if extensions is None:
         extensions = []
-    extensions = set(extensions + default_extensions)
+    # FIXME TypeError: Extension "builtins.list" must be of type:
+    # "markdown.Extension" WAT?!
+    # extensions = extensions + default_extensions
+    extensions = default_extensions
 
     md = markdown.Markdown(extensions=extensions, output_format='html5',
                            lazy_ol=False)
@@ -146,9 +149,6 @@ def md2archetype(config, mtext, extensions=None):
             itemmeta["attribution"] = [
                 {"role": "author", "name": value}]
 
-        elif key == 'tags':
-            itemmeta[key] = value.lower().split()
-
         elif key == "license":
             # FIXME License logic a mess. Replace w/symbol lookup (e.g. CC-BY)
             if "links" not in itemmeta:
@@ -162,13 +162,17 @@ def md2archetype(config, mtext, extensions=None):
                 itemmeta["category"] = {}
             itemmeta["category"][key[9:]] = value
 
+        # Defined as space-separated list
+        elif key in ("tags", "template"):
+            itemmeta[key] = value.lower().split()
+
         else:
             itemmeta[key] = value
 
     itemmeta['published'] = itemmeta.get('published') or itemmeta.get('updated')
     itemmeta['updated'] = itemmeta.get('updated') or itemmeta.get('published')
 
-    if re.match(r'\bArticle\b', itemmeta["itemtype"]):
+    if re.search(r'\bArticle\b', itemmeta["itemtype"]):
         archetype = {"Item": itemmeta, "Article": {"body": html}}
     else:
         archetype = {"Item": itemmeta, "Page": {"text": html}}
