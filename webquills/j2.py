@@ -15,6 +15,7 @@
 #   limitations under the License.
 #
 import jinja2
+import jmespath
 import yaml
 
 
@@ -29,11 +30,17 @@ def loadfile(filename):
     return data
 
 
+def jmes(struct, query):
+    # Reverses order of arguments for use as filter inside Jinja templates
+    return jmespath.search(query, struct)
+
+
 def render(config, context, templatename):
     # TODO Hard-coded FSLoader very limiting. Allow other loaders by config.
     # Certainly we will want package loader, possibly S3 loader.
     jinja = jinja2.Environment(
         loader=jinja2.FileSystemLoader(config["jinja2"]["templatedir"]))
+    jinja.filters["jmes"] = jmes
     template = jinja.get_or_select_template(templatename)
     return template.render(context)
 
