@@ -34,11 +34,6 @@ about = {}
 with open("webquills/__about__.py") as fp:
     exec(fp.read(), about)
 
-# Uncomment if you support 2.6 and use these
-# if sys.version_info < (2, 7):
-#     requirements += ['argparse']
-#     tests_reqs += ['unittest2']
-
 if sys.argv[-1] == 'info':
     for k, v in about.items():
         print('%s: %s' % (k, v))
@@ -55,11 +50,8 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     url=about['__url__'],
-    packages=[
-        'webquills',
-    ],
-    package_dir={'webquills':
-                 'webquills'},
+    packages=['webquills'],
+    package_dir={'webquills': 'webquills'},
     include_package_data=True,
     entry_points={'console_scripts': ['quill = webquills.quill:main']},
     install_requires=requirements,
@@ -70,12 +62,9 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
     test_suite='tests',
     tests_require=test_requirements

@@ -14,12 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-from __future__ import absolute_import, print_function, unicode_literals
 import webquills.j2 as j2
-
-
-def test_render():
-    pass
 
 
 def test_templates_from_context():

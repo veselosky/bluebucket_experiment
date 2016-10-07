@@ -43,13 +43,10 @@ Options:
     -x --extension=EXT      A python-markdown extension module to load.
 
 """
-from __future__ import absolute_import, print_function, unicode_literals
-
 import copy
 import json
 import sys
 from configparser import ConfigParser
-from io import open
 
 import jsonschema
 import webquills.indexer as indexer

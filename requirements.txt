@@ -1,3 +1,4 @@
+arrow
 colorama
 colorlog
 docopt
@@ -8,5 +9,4 @@ pyembed
 pyembed-markdown
 python-dateutil
 python-slugify
-pytz
 pyyaml

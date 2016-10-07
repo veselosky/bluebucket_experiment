@@ -14,21 +14,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-from __future__ import absolute_import, print_function, unicode_literals
-
-import datetime
 import json
 import re
 import string
 import uuid
-from datetime import datetime
-from io import open
 
+import arrow
 import jsonschema
 import markdown
 import pkg_resources
-import pytz
 from dateutil.parser import parse as parse_date
+from dateutil.tz import tzlocal
 from markdown.extensions.toc import TocExtension
 
 from webquills.util import slugify, is_sequence
@@ -53,10 +49,8 @@ def new_markdown(config, item_type, title=None, **kwargs):
         package. If supplied, <title> will be added to the metadata.
         """
     # Some defaults
-    now = datetime.now()
-    # FIXME Get TZ from config, default to something reasonable
-    now = pytz.timezone('America/New_York').localize(now).isoformat(
-        ).replace("+00:00", "Z")
+    timezone = config.get("site", {}).get("timezone", tzlocal())
+    now = arrow.now(timezone).isoformat().replace("+00:00", "Z")
     text = ""
 
     metas = ['itemtype: %s' % item_type, 'guid: %s' % uuid.uuid4()]
@@ -92,7 +86,7 @@ def md2archetype(config, mtext, extensions=None):
         -x --extension=EXT      A python-markdown extension module to load.
 
     """
-    zone = pytz.timezone(config.get("site", {}).get("timezone", "UTC"))
+    zone = config.get("site", {}).get("timezone", tzlocal())
     default_extensions = [
         'markdown.extensions.extra',
         'markdown.extensions.admonition',
@@ -129,15 +123,12 @@ def md2archetype(config, mtext, extensions=None):
     # Here we implement some special case transforms for data that may need
     # cleanup or is hard to encode using markdown's simple format.
     for key, value in metadata.items():
+        # markdown meta reads all items as arrays. unpack
         if is_sequence(value) and len(value) == 1:
             value = value[0]
         if key in ['created', 'date', 'published', 'updated']:
             # because humans are sloppy, we parse and normalize date values
-            dt = parse_date(value)
-            if dt.tzinfo:
-                dt = dt.astimezone(zone)
-            else:
-                dt = zone.localize(dt)
+            dt = arrow.get(parse_date(value), zone)
             if key == 'date':  # Legacy DC.date, convert to specific
                 key = 'published'
             itemmeta[key] = dt.isoformat().replace("+00:00", "Z")
