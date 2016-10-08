@@ -171,7 +171,7 @@ def md2archetype(config, mtext, extensions=None):
     itemmeta['updated'] = itemmeta.get('updated') or itemmeta.get('published')
 
     if re.search(r'\bArticle\b', itemmeta["itemtype"]):
-        archetype = {"Item": itemmeta, "Article": {"body": html}}
+        archetype = {"Item": itemmeta, "Page": {}, "Article": {"body": html}}
     else:
         archetype = {"Item": itemmeta, "Page": {"text": html}}
 
