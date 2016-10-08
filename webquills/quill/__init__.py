@@ -47,13 +47,17 @@ import copy
 import json
 import sys
 from configparser import ConfigParser
+from pathlib import Path
 
 import jsonschema
 import webquills.indexer as indexer
 import webquills.j2 as j2
 from docopt import docopt
-from webquills.mdown import md2archetype, new_markdown
+from webquills.mdown import archetype_from_file, new_markdown
 from webquills.util import SmartJSONEncoder, getLogger, change_ext
+
+
+UTF8 = "utf-8"
 
 
 def configure(args):
@@ -68,13 +72,13 @@ def configure(args):
     cfg["markdown"]["extensions"] = \
         cfg["markdown"].get("extensions", "").split()
 
-    for arg in args:
-        if arg == "--extension":
-            cfg["markdown"]["extensions"].extend(args["--extension"])
-        elif arg == "--context":
-            cfg["options"]["context"].extend(args["--context"])
-        elif arg.startswith("--"):
-            cfg["options"][arg[2:]] = args[arg]
+    for key, value in args.items():
+        if key == "--extension":
+            cfg["markdown"]["extensions"].extend(value)
+        elif key == "--context":
+            cfg["options"]["context"].extend(value)
+        elif key.startswith("--") and value is not None:
+            cfg["options"][key[2:]] = value
     return cfg
 
 
@@ -93,20 +97,20 @@ def main():
                            title=param['TITLE'])
         # Prepare the output file handle
         if param['--outfile']:
-            with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
-                outfile.write(doc)
+            Path(param["--outfile"]).write_text(doc, encoding=UTF8)
         else:
             print(doc)
 
-    elif param['md2json'] and param["--inplace"]:
-        for filename in param["FILES"]:
-            target = change_ext(filename, '.json')
-            logger.info("Processing %s" % target)
-            with open(filename, encoding="utf-8") as f:
-                mtext = f.read()
+    elif param['md2json']:
+        if param["--inplace"]:
+            files = [ Path(f) for f in param["FILES"] ]
+        else:
+            files = [ Path(param["INFILE"]) ]
+
+        for filename in files:
+            logger.info("Processing %s" % filename)
             try:
-                metadict = md2archetype(cfg, mtext, cfg["markdown"][
-                    "extensions"])
+                (metadict, target)= archetype_from_file(cfg, filename)
             except jsonschema.ValidationError as e:
                 # spits out a screwy error, make it more obvious
                 lines = str(e).splitlines()
@@ -115,69 +119,55 @@ def main():
                 logger.info(detail)
                 logger.error("in %s: %s" % (filename, message))
                 continue
-            with open(target, 'w', encoding="utf-8") as outfile:
-                json.dump(metadict, outfile, cls=SmartJSONEncoder)
 
-    elif param['md2json']:
-        with open(param["INFILE"], encoding='utf-8') as infile:
-            mtext = infile.read()
+            # Prepare the output file handle
+            if param['--outfile']:  # If to file, use compact representation
+                with open(param['--outfile'], 'w', encoding=UTF8) as outfile:
+                    json.dump(metadict, outfile, cls=SmartJSONEncoder)
 
-        try:
-            metadict = md2archetype(cfg, mtext, cfg["markdown"]["extensions"])
-        except jsonschema.ValidationError as e:
-            # spits out a screwy error, make it more obvious
-            lines = str(e).splitlines()
-            message = lines.pop(0) +"\n"
-            detail = "\n".join(lines) + "\n"
-            logger.info(detail)
-            logger.error("in %s: %s" % (param["INFILE"], message))
-            exit(1)
+            elif param["--inplace"]:
+                with target.open('w', encoding=UTF8) as outfile:
+                    json.dump(metadict, outfile, cls=SmartJSONEncoder)
 
-        # Prepare the output file handle
-        if param['--outfile']:  # If to file, use compact representation
-            with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
-                json.dump(metadict, outfile, cls=SmartJSONEncoder)
-        else:  # If stdout, pretty print
-            json.dump(metadict, sys.stdout, sort_keys=True, indent=2,
-                      cls=SmartJSONEncoder)
+            else:  # If stdout, pretty print
+                json.dump(metadict, sys.stdout, sort_keys=True, indent=2,
+                          cls=SmartJSONEncoder)
 
     elif param["j2"]:
         context = copy.deepcopy(cfg)
-        for varfile in param['VARFILES']:
-            context.update(j2.loadfile(varfile))
+        for file in param['VARFILES']:
+            context.update(j2.loadfile(file))
         doc = j2.render(cfg, context, param["TEMPLATE"])
         if param['--outfile']:
-            with open(param['--outfile'], 'w', encoding="utf-8") as outfile:
-                outfile.write(doc)
+            Path(param['--outfile']).write_text(doc, encoding=UTF8)
         else:
             print(doc)
 
     elif param["render"]:
         base_context = copy.deepcopy(cfg)
-        for varfile in cfg["options"]["context"]:
-            base_context.update(j2.loadfile(varfile))
+        for file in cfg["options"]["context"]:
+            base_context.update(j2.loadfile(file))
 
-        for varfile in param['JSON']:
-            logger.info("Processing %s" % varfile)
-            item = j2.loadfile(varfile)
+        for file in param['JSON']:
+            logger.info("Processing %s" % file)
+            item = j2.loadfile(file)
             if not "Item" in item:
-                logger.warning("Skipping non-Item JSON file: %s" % varfile)
+                logger.warning("Skipping non-Item JSON file: %s" % file)
                 continue
             context = dict(base_context, **item)
             templates = j2.templates_from_context(context)
             logger.info(item["Item"]["itemtype"])
             for key in templates:
                 out = j2.render(cfg, context, templates[key])
-                dest = change_ext(varfile, key)
-                with open(dest, 'w', encoding="utf-8") as outfile:
-                    outfile.write(out)
+                Path(file).with_suffix('.'+key).write_text(out, encoding=UTF8)
 
     elif param["index"]:
         index = {}
+        target = None
         if param["--addto"]:
             target = param["--addto"]
             try:
-                with open(target, encoding="utf-8") as the_index:
+                with open(target, encoding=UTF8) as the_index:
                     index = json.load(the_index)
             except FileNotFoundError as e:
                 logger.info("File does not exist. Creating: %s" % target)
@@ -187,15 +177,14 @@ def main():
 
         for infile in param["JSON"]:
             try:
-                with open(infile, encoding="utf-8") as handle:
-                    data = json.load(handle)
+                data = json.loads(Path(infile).read_text(encoding=UTF8))
             except Exception as e:
                 logger.info(str(e))
                 logger.error("File could not be parsed: %s" % infile)
                 continue
             index = indexer.add_to_index(index, data)
         if target:  # If to file, use compact representation
-            with open(target, 'w', encoding="utf-8") as outfile:
+            with open(target, 'w', encoding=UTF8) as outfile:
                 json.dump(index, outfile, cls=SmartJSONEncoder)
         else:  # If stdout, pretty print
             json.dump(index, sys.stdout, sort_keys=True, indent=2,

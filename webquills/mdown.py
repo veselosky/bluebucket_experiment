@@ -14,10 +14,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+import copy
 import json
 import re
 import string
 import uuid
+from pathlib import Path
 
 import arrow
 import jsonschema
@@ -38,6 +40,10 @@ Title: <75 characters
 Url: <90 characters (category + slug)
 Description: <160 characters
 '''
+
+itemschema = None
+md = None
+UTF8 = "utf-8"
 
 
 def new_markdown(config, item_type, title=None, **kwargs):
@@ -86,37 +92,37 @@ def md2archetype(config, mtext, extensions=None):
         -x --extension=EXT      A python-markdown extension module to load.
 
     """
-    zone = config.get("site", {}).get("timezone", tzlocal())
-    default_extensions = [
-        'markdown.extensions.extra',
-        'markdown.extensions.admonition',
-        'markdown.extensions.codehilite',
-        'markdown.extensions.meta',
-        'markdown.extensions.sane_lists',
-        TocExtension(permalink=True),  # replaces headerId
-        'pyembed.markdown'
-    ]
-    # TODO get extensions from config
-    if extensions is None:
-        extensions = []
-    # FIXME TypeError: Extension "builtins.list" must be of type:
-    # "markdown.Extension" WAT?!
-    # extensions = extensions + default_extensions
-    extensions = default_extensions
-
-    md = markdown.Markdown(extensions=extensions, output_format='html5',
-                           lazy_ol=False)
+    # Cache at module level to save setup on multiple calls
+    global itemschema
+    global md
+    if md is None:
+        default_extensions = [
+            'markdown.extensions.extra',
+            'markdown.extensions.admonition',
+            'markdown.extensions.codehilite',
+            'markdown.extensions.meta',
+            'markdown.extensions.sane_lists',
+            TocExtension(permalink=True),  # replaces headerId
+            'pyembed.markdown'
+        ]
+        if extensions is None:
+            extensions = []
+        extensions.extend(default_extensions)
+        extensions.extend(config["markdown"]["extensions"])
+        md = markdown.Markdown(extensions=extensions, output_format='html5',
+                               lazy_ol=False)
 
     html = md.convert(mtext)
     # TODO (Someday) Extract headline from the HTML body for meta
 
+    zone = config.get("site", {}).get("timezone", tzlocal())
     # hard coded defaults: markdown can only represent HTML pages
     itemmeta = {
         "contenttype": "text/html; charset=utf-8",
         "itemtype": "Item/Page"
     }
     # User configurable defaults
-    metadata = config.get("item_defaults", {})
+    metadata = copy.deepcopy(config.get("item_defaults", {}))
     # Actual document metadata
     metadata.update(md.Meta)
 
@@ -147,7 +153,8 @@ def md2archetype(config, mtext, extensions=None):
             itemmeta["links"].append({"href": value, "rel": "license"})
 
         elif key == "category":  # Typical usage provides only name
-            itemmeta["category"] = {"name": value}
+            itemmeta["category"] = {"name": value, "label": slugify(value)}
+
         elif key.startswith("category-"):
             if "category" not in itemmeta:
                 itemmeta["category"] = {}
@@ -168,9 +175,37 @@ def md2archetype(config, mtext, extensions=None):
     else:
         archetype = {"Item": itemmeta, "Page": {"text": html}}
 
-    schemafile = pkg_resources.resource_filename('webquills.schemas',
-                                                'Item.json')
-    with open(schemafile, encoding="utf-8") as f:
-        schema = json.load(f)
-    jsonschema.validate(archetype, schema)  # Raises ValidationError
+    if itemschema is None:
+        schemafile = pkg_resources.resource_filename('webquills.schemas',
+                                                    'Item.json')
+        with open(schemafile, encoding="utf-8") as f:
+            itemschema = json.load(f)
+
+    jsonschema.validate(archetype, itemschema)  # Raises ValidationError
     return archetype
+
+
+# When reading from a file, we can infer some additional metadata
+def archetype_from_file(config, infile):
+    infile = Path(infile)
+    # intentionally allow exceptions to propagate up:
+    archetype = md2archetype(config, infile.read_text(encoding=UTF8))
+    # A little extra magic: populate some defaults from the source
+    # file name if not explicitly defined.
+    item = archetype["Item"]
+    root = config["options"].get("root", "")
+    default_cat = {"label": str(infile.parent.relative_to(root))}
+    if default_cat["label"] == ".":
+        default_cat["label"] = ""
+    default_cat["name"] = default_cat["label"].replace("-", " ").title()
+    item.setdefault("category", default_cat)
+    item.setdefault("slug", str(infile.stem))
+
+    target = Path(root, item["category"]["label"], item["slug"] + ".json")
+    item.setdefault("links", []).extend([{
+        "rel": "wq:source", "href": "/" + str(infile.relative_to(root))
+    }, {
+        "rel": "wq:archetype", "href": "/" + str(target.relative_to(root))
+    }, ])
+
+    return (archetype, target)
