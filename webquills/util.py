@@ -49,12 +49,6 @@ class SmartJSONEncoder(json.JSONEncoder):
             return super(SmartJSONEncoder, self).default(o)
 
 
-def change_ext(key, ext):
-    if not ext.startswith('.'):
-        ext = '.' + ext
-    return path.splitext(key)[0] + ext
-
-
 # Ugh! Why does logging have to be so damned hard?
 def getLogger():
     # TODO get verbosity from params

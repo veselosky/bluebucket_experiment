@@ -54,7 +54,7 @@ import webquills.indexer as indexer
 import webquills.j2 as j2
 from docopt import docopt
 from webquills.mdown import archetype_from_file, new_markdown
-from webquills.util import SmartJSONEncoder, getLogger, change_ext
+from webquills.util import SmartJSONEncoder, getLogger
 
 
 UTF8 = "utf-8"
