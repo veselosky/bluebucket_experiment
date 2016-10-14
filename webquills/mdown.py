@@ -108,7 +108,7 @@ def md2archetype(config, mtext, extensions=None):
         if extensions is None:
             extensions = []
         extensions.extend(default_extensions)
-        extensions.extend(config["markdown"]["extensions"])
+        extensions.extend(config.get("markdown", {}).get("extensions", []))
         md = markdown.Markdown(extensions=extensions, output_format='html5',
                                lazy_ol=False)
 
@@ -129,8 +129,11 @@ def md2archetype(config, mtext, extensions=None):
     # Here we implement some special case transforms for data that may need
     # cleanup or is hard to encode using markdown's simple format.
     for key, value in metadata.items():
-        # markdown meta reads all items as arrays. unpack
-        if is_sequence(value) and len(value) == 1:
+        # markdown meta reads all items as arrays. unpack.
+        # Unless it's *supposed* to be an array.
+        # TODO (Someday) DRY Get array types from schema, not hard-coded here!
+        list_expected =("query", "template")
+        if is_sequence(value) and len(value) == 1 and key not in list_expected:
             value = value[0]
         if key in ['created', 'date', 'published', 'updated']:
             # because humans are sloppy, we parse and normalize date values
@@ -160,8 +163,7 @@ def md2archetype(config, mtext, extensions=None):
                 itemmeta["category"] = {}
             itemmeta["category"][key[9:]] = value
 
-        # Defined as space-separated list
-        elif key in ("tags", "template"):
+        elif key in ("tags", ):  # Defined as space-separated list
             itemmeta[key] = value.lower().split()
 
         else:

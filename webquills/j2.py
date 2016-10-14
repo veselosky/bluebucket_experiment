@@ -16,18 +16,6 @@
 #
 import jinja2
 import jmespath
-import yaml
-
-
-def loadfile(filename):
-    # json is a subset of yaml, so the yaml parser can handle both! yay!
-    try:
-        with open(filename) as fp:
-            data = yaml.load(fp)
-    except yaml.scanner.ScannerError:
-        raise TypeError(
-            "Unrecognized file type. Data files must be JSON or YAML.")
-    return data
 
 
 def jmes(struct, query):

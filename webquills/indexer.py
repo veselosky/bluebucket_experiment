@@ -15,12 +15,14 @@
 #   limitations under the License.
 #
 def add_to_index(index, *args):
+    index.setdefault("Items", {})
     for input in args:
         # Rather than validate every one against schema, just duck-type
         try:
             item = input["Item"]
-            index[item["guid"]]= item
+            index["Items"][item["guid"]]= item
         except KeyError:  # ignore inputs that don't conform
             pass
 
+    index["totalResults"] = len(index["Items"])
     return index

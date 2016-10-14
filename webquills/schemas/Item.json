@@ -66,7 +66,7 @@
                 "published",
                 "title"
             ],
-            "properties":{
+            "properties": {
                 "archetype": {"$ref": "#/definitions/link"},
                 "attribution": {
                     "description": "Byline or author/contributor credits",
@@ -113,6 +113,14 @@
             "properties": {
                 "body": {"type": "string"},
                 "headline": {"type": "string"}
+            }
+        },
+        "Index": {
+            "type": "object",
+            "required": [ "Items" ],
+            "properties": {
+                "Items": {"type": "object"},
+                "totalResults": {"type": "integer"}
             }
         }
     },
