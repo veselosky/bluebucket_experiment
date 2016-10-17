@@ -107,6 +107,7 @@ def main():
         index = localfs.read_index(cfg)
         for file in localfs.archetypes_needing_indexing(cfg):
             indexer.add_to_index(index, localfs.loadjson(file))
+        localfs.write_index(cfg, index)
 
         # 4. find any json files needing outputs
         base_context = copy.deepcopy(cfg)
@@ -117,6 +118,8 @@ def main():
                 logger.warning("Skipping non-Item JSON file: %s" % file)
                 continue
             context = dict(base_context, **item)
+            if item["Item"]["itemtype"].startswith("Item/Page/Catalog"):
+                context["Index"] = index
             # returns a dict of {".ext": ["templates", ]
             templates = j2.templates_from_context(context)
             for key in templates:

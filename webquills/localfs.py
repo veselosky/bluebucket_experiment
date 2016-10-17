@@ -18,6 +18,7 @@ import json
 import shutil
 from pathlib import Path
 
+from webquills.util import SmartJSONEncoder
 
 def loadjson(fname):
     with Path(fname).open("r", encoding="utf-8") as f:
@@ -44,6 +45,13 @@ def read_index(config):
     except FileNotFoundError:
         index = {}
     return index
+
+
+def write_index(config, index):
+    builddir = Path(config["options"]["root"])
+    indexfile = builddir.joinpath("_index.json")
+    out = json.dumps(index, cls=SmartJSONEncoder)
+    indexfile.write_text(out, encoding="utf-8")
 
 
 def copysources(config):
