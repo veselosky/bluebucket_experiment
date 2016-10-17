@@ -138,7 +138,8 @@ def main():
             print(doc)
 
     elif param["config"]:
+        out = repr(cfg)
         if param["QUERY"]:
-            print(repr(jmespath.search(param["QUERY"], cfg)))
-        else:
-            print(repr(cfg))
+            out = repr(jmespath.search(param["QUERY"], cfg))
+        out = out.strip().strip('"\'')
+        print(out)
