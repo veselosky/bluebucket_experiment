@@ -16,11 +16,15 @@
 #
 import jinja2
 import jmespath
-
+import urllib.parse as uri
 
 def jmes(struct, query):
     # Reverses order of arguments for use as filter inside Jinja templates
     return jmespath.search(query, struct)
+
+
+def absolute(relative, base):
+    return uri.urljoin(base, relative)
 
 
 def render(config, context, templatename):
@@ -29,6 +33,7 @@ def render(config, context, templatename):
     jinja = jinja2.Environment(
         loader=jinja2.FileSystemLoader(config["jinja2"]["templatedir"]))
     jinja.filters["jmes"] = jmes
+    jinja.filters["absolute"] = absolute
     template = jinja.get_or_select_template(templatename)
     return template.render(context)
 

@@ -177,6 +177,8 @@ def md2archetype(config, mtext, extensions=None):
     else:
         archetype = {"Item": itemmeta, "Page": {"text": html}}
 
+    itemmeta.setdefault("wq_output", ["html"])
+
     if itemschema is None:
         schemafile = pkg_resources.resource_filename('webquills.schemas',
                                                     'Item.json')
@@ -203,11 +205,16 @@ def archetype_from_file(config, infile):
     item.setdefault("category", default_cat)
     item.setdefault("slug", str(infile.stem))
 
+    # Calculate paths/URLs for some key LINKS
     target = Path(root, item["category"]["label"], item["slug"] + ".json")
+    wq_source = "/" + str(infile.relative_to(root))
+    wq_archetype = "/" + str(target.relative_to(root))
+    # TODO Add canonical URL
+
     item.setdefault("links", []).extend([{
-        "rel": "wq:source", "href": "/" + str(infile.relative_to(root))
+        "rel": "wq:source", "href": wq_source
     }, {
-        "rel": "wq:archetype", "href": "/" + str(target.relative_to(root))
+        "rel": "wq:archetype", "href": wq_archetype
     }, ])
 
     return (archetype, target)
