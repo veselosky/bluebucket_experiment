@@ -59,16 +59,18 @@
         "Item": {
             "type": "object",
             "required": [
+                "attributions",
                 "contenttype",
                 "copyright",
                 "guid",
                 "itemtype",
+                "links",
                 "published",
                 "title"
             ],
             "properties": {
                 "archetype": {"$ref": "#/definitions/link"},
-                "attribution": {
+                "attributions": {
                     "description": "Byline or author/contributor credits",
                     "type": "array",
                     "items": {
@@ -95,7 +97,6 @@
                 "itemtype": {"type": "string"},
                 "links": {"$ref": "#/definitions/linklist"},
                 "published": {"type": "string", "format": "date-time"},
-                "rights": {"$ref": "#/definitions/rights"},
                 "slug": {"type": "string"},
                 "thumbnail": {"$ref": "#/definitions/link"},
                 "title": {"type": "string"},
