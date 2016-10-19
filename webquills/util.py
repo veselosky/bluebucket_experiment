@@ -14,15 +14,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+import copy
 import datetime
 import logging
 import json
-import posixpath as path
 from gzip import GzipFile
 from io import BytesIO
 
 import colorlog
+import jsonschema
+import pkg_resources
 import slugify as sluglib
+from pathlib import Path
 
 
 class SmartJSONEncoder(json.JSONEncoder):
@@ -49,18 +52,50 @@ class SmartJSONEncoder(json.JSONEncoder):
             return super(SmartJSONEncoder, self).default(o)
 
 
+class Schematist(object):
+
+    def __init__(self, config):
+        self.config = config
+        self.root = Path(config["options"].get("root", ""))
+        schemafile = pkg_resources.resource_filename('webquills.schemas',
+                                                     'Item.json')
+        with open(schemafile, encoding="utf-8") as f:
+            self.itemschema = json.load(f)
+
+    def item_defaults_for(self, path: Path) -> dict:
+        meta = copy.deepcopy(self.config.get("item_defaults", {}))
+        default_cat = {"label": str(path.parent.relative_to(self.root))}
+        if default_cat["label"] == ".":
+            default_cat["label"] = ""
+        default_cat["name"] = default_cat["label"].replace("-", " ").title()
+        meta.setdefault("category", default_cat)
+        meta.setdefault("slug", str(path.stem))
+        meta.setdefault("wq_output", ["html"])
+
+        return meta
+
+    def validate(self, struct):
+        jsonschema.validate(struct, self.itemschema)  # Raises ValidationError
+        return True
+
+
 # Ugh! Why does logging have to be so damned hard?
+logger = None
+
+
 def getLogger():
     # TODO get verbosity from params
-    handler = colorlog.StreamHandler()
-    handler.setFormatter(colorlog.ColoredFormatter(
-        '%(log_color)s%(levelname)s: %(message)s', log_colors={
-            'DEBUG': 'white', 'INFO': 'cyan', 'WARNING': 'yellow',
-            'ERROR': 'red', 'CRITICAL': 'red,bg_white',
-        }, ))
-    logger = colorlog.getLogger('webquills')
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    global logger
+    if logger is None:
+        handler = colorlog.StreamHandler()
+        handler.setFormatter(colorlog.ColoredFormatter(
+            '%(log_color)s%(levelname)s: %(message)s', log_colors={
+                'DEBUG': 'white', 'INFO': 'cyan', 'WARNING': 'yellow',
+                'ERROR': 'red', 'CRITICAL': 'red,bg_white',
+            }, ))
+        logger = colorlog.getLogger('webquills')
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
     return logger
 
 

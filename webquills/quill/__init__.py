@@ -36,84 +36,77 @@ Options:
 
 """
 import copy
-import json
-import sys
-from configparser import ConfigParser
 from pathlib import Path
 
 import jmespath
 import jsonschema
 import webquills.indexer as indexer
 import webquills.j2 as j2
+import yaml
 from docopt import docopt
-from webquills import localfs as localfs
-from webquills.mdown import archetype_from_file, new_markdown
-from webquills.util import SmartJSONEncoder, getLogger
+from webquills.localfs import LocalArchivist
+from webquills.mdown import md2archetype, new_markdown
+import webquills.util as util
 
 
 UTF8 = "utf-8"
 
 
 def configure(args):
-    configurator = ConfigParser()
-    configurator.read('webquills.ini')
-    cfg = {"markdown": {}, "jinja2": {}}
-    for section in configurator:
-        cfg[section.lower()] = dict(configurator[section].items())
-
-    # Read from config as space separated string; convert to list
-    cfg["options"]["context"] = cfg["options"].get("context", "").split()
-    cfg["markdown"]["extensions"] = \
-        cfg["markdown"].get("extensions", "").split()
+    with open("webquills.yml") as f:
+        cfg = yaml.load(f, Loader=yaml.BaseLoader)
+    cfg.setdefault("markdown", {})
+    cfg.setdefault("jinja2", {})
+    cfg.setdefault("options", {})
+    cfg.setdefault("site", {})
 
     for key, value in args.items():
-        if key == "--extension":
-            cfg["markdown"]["extensions"].extend(value)
-        elif key == "--context":
-            cfg["options"]["context"].extend(value)
-        elif key.startswith("--") and value is not None:
+        if key.startswith("--") and value is not None:
             cfg["options"][key[2:]] = value
     return cfg
 
 
 # MAIN: Dispatch to individual handlers
 def main():
-    logger = getLogger()
+    logger = util.getLogger()
     item_types = {"article": "Item/Page/Article", "page": "Item/Page"}
     param = docopt(__doc__)
     cfg = configure(param)
-    # logger.info(repr(cfg))
-    # logger.debug(repr(param))
+    arch = LocalArchivist(cfg)
+    schema = util.Schematist(cfg)
 
     if param["build"]:
         # 1. cp any files from srcdir needing update to root
-        localfs.copysources(cfg)
+        arch.gather_sources()
         # 2. find root sources needing JSON; md2json them
-        for filename in localfs.sources_needing_update(cfg):
+        for filename in arch.sources_needing_update():
+            logger.info("Updating source: %s" % filename)
+            itemmeta = schema.item_defaults_for(filename)
+            archetype = md2archetype(cfg, filename.read_text(encoding=UTF8),
+                                     itemmeta)
             try:
-                (metadict, target) = archetype_from_file(cfg, filename)
+                schema.validate(archetype)
             except jsonschema.ValidationError as e:
-                # spits out a screwy error, make it more obvious
-                lines = str(e).splitlines()
-                message = lines.pop(0) + "\n"
-                detail = "\n".join(lines) + "\n"
-                logger.info(detail)
-                logger.error("in %s: %s" % (filename, message))
+                logger.info(str(e))
+                logger.error("%s: %s at %s" % (filename, e.message, e.path))
                 continue
-            with target.open('w', encoding=UTF8) as outfile:
-                    json.dump(metadict, outfile, cls=SmartJSONEncoder)
+            target = arch.root/archetype["Item"]["category"][
+                "label"]/archetype["Item"]["slug"]
+            target = target.with_suffix(".json")
+            arch.write_json(target,archetype)
 
         # 3. find json files needing indexing; index them
-        index = localfs.read_index(cfg)
-        for file in localfs.archetypes_needing_indexing(cfg):
-            indexer.add_to_index(index, localfs.loadjson(file))
-        localfs.write_index(cfg, index)
+        index = arch.load_json(arch.root/"_index.json", default={})
+        for file in arch.archetypes_needing_indexing():
+            logger.info("Indexing %s" % file)
+            indexer.add_to_index(index, arch.load_json(file))
+        arch.write_json(arch.root / "_index.json", index)
 
         # 4. find any json files needing outputs
         base_context = copy.deepcopy(cfg)
-        for file in localfs.archetypes_needing_render(cfg):
-            logger.info("Processing %s" % file)
-            item = localfs.loadjson(file)
+        for file in arch.archetypes_needing_render():
+            logger.info("Rendering %s" % file)
+            item = arch.load_json(file)
             if not "Item" in item:
                 logger.warning("Skipping non-Item JSON file: %s" % file)
                 continue
