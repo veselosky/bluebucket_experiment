@@ -22,6 +22,7 @@ from gzip import GzipFile
 from io import BytesIO
 
 import colorlog
+import jmespath
 import jsonschema
 import pkg_resources
 import slugify as sluglib
@@ -62,17 +63,36 @@ class Schematist(object):
         with open(schemafile, encoding="utf-8") as f:
             self.itemschema = json.load(f)
 
-    def item_defaults_for(self, path: Path) -> dict:
-        meta = copy.deepcopy(self.config.get("item_defaults", {}))
+    def apply_defaults(self, archetype: dict, path: Path) -> dict:
+        logger = getLogger()
+        meta = archetype["Item"]
+        configured_default = copy.deepcopy(self.config.get("item_defaults", {}))
+        for key, value in configured_default.items():
+            meta.setdefault(key, value)
+
         default_cat = {"label": str(path.parent.relative_to(self.root))}
         if default_cat["label"] == ".":
             default_cat["label"] = ""
         default_cat["name"] = default_cat["label"].replace("-", " ").title()
+
         meta.setdefault("category", default_cat)
         meta.setdefault("slug", str(path.stem))
         meta.setdefault("wq_output", ["html"])
-
-        return meta
+        meta.setdefault("attributions", [])
+        meta.setdefault("links", [])
+        # If there is an author, that's the default copyright holder.
+        try:
+            author = jmespath.search("[?role==`author`]|[0]",
+                                     meta["attributions"])
+            meta.setdefault("copyright_holder", author)
+        except KeyError:
+            # no author
+            logger.error("No author found in attributions: %s" % meta.get(
+                "attributions"))
+            pass
+        copyright = "©%s %s" % (meta["updated"][:4],
+                                meta.get("copyright_holder", {}).get("name"))
+        meta.setdefault("copyright", copyright)
 
     def validate(self, struct):
         jsonschema.validate(struct, self.itemschema)  # Raises ValidationError

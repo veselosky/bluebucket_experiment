@@ -18,6 +18,8 @@ import jinja2
 import jmespath
 import urllib.parse as uri
 
+from webquills.util import getLogger
+
 def jmes(struct, query):
     # Reverses order of arguments for use as filter inside Jinja templates
     return jmespath.search(query, struct)
@@ -45,9 +47,12 @@ def templates_from_context(ctx):
     # will be used to render an output with that extension.
     # Default HTML templates will be added.
     templates = ctx.get("jinja2_templates", {})
-    pieces = ctx["Item"].get("itemtype", "Item").split("/")
+    pieces = ctx["Item"]["itemtype"].split("/")
+    logger = getLogger()
+    logger.debug("templates from context: " + repr(pieces))
     while pieces:
         templates.setdefault("html", []).append("_".join(pieces) + ".html.j2")
         pieces.pop()
     # TODO Allow template overrides
+    logger.debug("templates from context: " + repr(templates))
     return templates

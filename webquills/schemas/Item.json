@@ -59,6 +59,7 @@
         "Item": {
             "type": "object",
             "required": [
+                "archetype",
                 "attributions",
                 "contenttype",
                 "copyright",
@@ -66,7 +67,8 @@
                 "itemtype",
                 "links",
                 "published",
-                "title"
+                "title",
+                "wq_output"
             ],
             "properties": {
                 "archetype": {"$ref": "#/definitions/link"},
@@ -98,9 +100,11 @@
                 "links": {"$ref": "#/definitions/linklist"},
                 "published": {"type": "string", "format": "date-time"},
                 "slug": {"type": "string"},
+                "source": {"$ref": "#/definitions/link"},
                 "thumbnail": {"$ref": "#/definitions/link"},
                 "title": {"type": "string"},
-                "updated": {"type": "string", "format": "date-time"}
+                "updated": {"type": "string", "format": "date-time"},
+                "wq_output": {"type": "array", "items": {"type": "string"}}
             }
         },
         "Page": {

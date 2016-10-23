@@ -17,6 +17,7 @@
 import re
 import string
 import uuid
+from collections import OrderedDict
 
 import arrow
 import markdown
@@ -52,30 +53,31 @@ def new_markdown(config, item_type, title=None, **kwargs):
     timezone = config.get("site", {}).get("timezone", tzlocal())
     now = arrow.now(timezone).isoformat().replace("+00:00", "Z")
     text = ""
+    metas = OrderedDict(itemtype=item_type, guid=uuid.uuid4())
+    metas.update(kwargs)
+    metas.setdefault("created", now)
+    metas.setdefault("updated", now)
+    metas.setdefault("published", now)
 
-    metas = ['itemtype: %s' % item_type, 'guid: %s' % uuid.uuid4()]
-    for key in kwargs:
-        metas.append('%s: %s' % (key, kwargs[key]))
-    if 'created' not in kwargs:
-        metas.append('created: %s' % now)
-    if 'updated' not in kwargs:
-        metas.append('updated: %s' % now)
-    if 'published' not in kwargs:
-        metas.append('published: %s' % now)
-    if 'category' not in kwargs:
+    if 'category' not in metas:
         text += category_seo_msg
 
     if title:
-        metas.append('slug: %s' % util.slugify(title))
-        metas.append('title: %s' % title)
+        metas["slug"] = util.slugify(title)
+        metas["title"] = title
     else:
-        metas.append('title:')
         text += "\nYou need to set a title. It's a required field!\n"
+    # Once again pyyaml is trying to be far too clever and cluttering output,
+    # so we do this the old fashioned way. -VV 2016-10-23
+    out = "---\n"
+    for key, value in metas.items():
+        out += "%s: %s\n" % (key, value)
+    out += "...\n"
+    out += text
+    return out
 
-    return "\n".join(metas) + "\n\n" + text
 
-
-def md2archetype(config, intext: str, itemmeta: dict):
+def md2archetype(config, intext: str):
     """
     Markdown to JSON.
 
@@ -86,7 +88,6 @@ def md2archetype(config, intext: str, itemmeta: dict):
         -x --extension=EXT      A python-markdown extension module to load.
 
     """
-    logger = util.getLogger()
     # Cache at module level to save setup on multiple calls
     global md
     if md is None:
@@ -115,14 +116,9 @@ def md2archetype(config, intext: str, itemmeta: dict):
     # TODO (Someday) Extract headline from the HTML body for meta
 
     zone = config.get("site", {}).get("timezone", tzlocal())
-    # hard coded defaults: markdown can only represent HTML pages
-    metadata.setdefault("contenttype", "text/html; charset=utf-8")
-    metadata.setdefault("itemtype", "Item/Page")
-    metadata.setdefault("attributions", [])
-    metadata.setdefault("links", [])
-
     # Here we implement some special case transforms for data that may need
     # cleanup or is hard to encode using markdown's simple format.
+    itemmeta = {}
     for key, value in metadata.items():
         key = key.lower()
         if key in ['created', 'date', 'published', 'updated']:
@@ -136,15 +132,14 @@ def md2archetype(config, intext: str, itemmeta: dict):
         elif key == 'itemtype':
             itemmeta[key] = string.capwords(value, '/')
 
-        elif key == 'author':
-            itemmeta["attributions"] = [
-                {"role": "author", "name": value}]
-
         else:
             itemmeta[key] = value
 
     itemmeta['published'] = itemmeta.get('published') or itemmeta.get('updated')
     itemmeta['updated'] = itemmeta.get('updated') or itemmeta.get('published')
+    # hard coded defaults: markdown typically represents HTML pages
+    itemmeta.setdefault("contenttype", "text/html; charset=utf-8")
+    itemmeta.setdefault("itemtype", "Item/Page")
 
     if re.search(r'\bArticle\b', itemmeta["itemtype"]):
         archetype = {"Item": itemmeta, "Page": {}, "Article": {"body": html}}

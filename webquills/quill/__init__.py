@@ -79,49 +79,59 @@ def main():
         # 1. cp any files from srcdir needing update to root
         arch.gather_sources()
         # 2. find root sources needing JSON; md2json them
-        for filename in arch.sources_needing_update():
-            logger.info("Updating source: %s" % filename)
-            itemmeta = schema.item_defaults_for(filename)
-            archetype = md2archetype(cfg, filename.read_text(encoding=UTF8),
-                                     itemmeta)
+        for src in arch.sources_needing_update():
+            logger.info("Updating source: %s" % src)
+            archetype = md2archetype(cfg, src.read_text(encoding=UTF8))
+            schema.apply_defaults(archetype, src)
+
+            target = schema.root / archetype["Item"]["category"]["label"] / \
+                     archetype["Item"]["slug"]
+            target = target.with_suffix(".json")
+            archetype["Item"]["archetype"] = {
+                "href": str(target.relative_to(arch.root)),
+                "rel":  "wq:archetype"
+            }
+            archetype["Item"]["source"] = {
+                "href": str(src.relative_to(arch.root)), "rel": "wq:source"
+            }
+
             try:
                 schema.validate(archetype)
             except jsonschema.ValidationError as e:
                 logger.info(str(e))
-                logger.error("%s: %s at %s" % (filename, e.message, e.path))
+                logger.error("%s: %s at %s" % (src, e.message, e.path))
                 continue
-            target = arch.root/archetype["Item"]["category"][
-                "label"]/archetype["Item"]["slug"]
-            target = target.with_suffix(".json")
-            arch.write_json(target,archetype)
+            arch.write_json(target, archetype)
 
         # 3. find json files needing indexing; index them
-        index = arch.load_json(arch.root/"_index.json", default={})
+        indexfile = arch.root / "_index.json"
+        index = arch.load_json(indexfile, default={})
         for file in arch.archetypes_needing_indexing():
             logger.info("Indexing %s" % file)
             indexer.add_to_index(index, arch.load_json(file))
-        arch.write_json(arch.root / "_index.json", index)
+        arch.write_json(indexfile, index)
 
         # 4. find any json files needing outputs
         base_context = copy.deepcopy(cfg)
         for file in arch.archetypes_needing_render():
             logger.info("Rendering %s" % file)
             item = arch.load_json(file)
-            if not "Item" in item:
+            if "Item" not in item:
                 logger.warning("Skipping non-Item JSON file: %s" % file)
                 continue
-            context = dict(base_context, **item)
+            context = copy.deepcopy(base_context)
+            context.update(item)
             if item["Item"]["itemtype"].startswith("Item/Page/Catalog"):
                 context["Index"] = index
-            # returns a dict of {".ext": ["templates", ]
-            templates = j2.templates_from_context(context)
-            for key in templates:
+
+            outputs = j2.templates_from_context(context)
+            for extension, templatelist in outputs.items():
                 # Allows items to override output format, or request
                 # additional formats
-                if key not in context["Item"].get("wq_output", ["html"]):
+                if extension not in context["Item"]["wq_output"]:
                     continue
-                out = j2.render(cfg, context, templates[key])
-                file.with_suffix('.' + key).write_text(out, encoding=UTF8)
+                out = j2.render(cfg, context, templatelist)
+                file.with_suffix('.' + extension).write_text(out, encoding=UTF8)
 
     elif param['new']:
         # TODO (someday) Prompt user for metadata values
