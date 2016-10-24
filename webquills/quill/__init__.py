@@ -88,11 +88,12 @@ def main():
                      archetype["Item"]["slug"]
             target = target.with_suffix(".json")
             archetype["Item"]["archetype"] = {
-                "href": str(target.relative_to(arch.root)),
+                "href": "/" + str(target.relative_to(arch.root)),
                 "rel":  "wq:archetype"
             }
             archetype["Item"]["source"] = {
-                "href": str(src.relative_to(arch.root)), "rel": "wq:source"
+                "href": "/" + str(src.relative_to(arch.root)),
+                "rel": "wq:source"
             }
 
             try:
