@@ -119,6 +119,7 @@ def md2archetype(config, intext: str):
     # Here we implement some special case transforms for data that may need
     # cleanup or is hard to encode using markdown's simple format.
     itemmeta = {}
+    catalog_meta = {}
     for key, value in metadata.items():
         key = key.lower()
         if key in ['created', 'date', 'published', 'updated']:
@@ -132,6 +133,10 @@ def md2archetype(config, intext: str):
         elif key == 'itemtype':
             itemmeta[key] = string.capwords(value, '/')
 
+        elif key == "queries":
+            # FIXME Should not be hard-coded, but not sure how to configure
+            # Queries belong to Catalog, not Item
+            catalog_meta[key] = value
         else:
             itemmeta[key] = value
 
@@ -143,6 +148,8 @@ def md2archetype(config, intext: str):
 
     if re.search(r'\bArticle\b', itemmeta["itemtype"]):
         archetype = {"Item": itemmeta, "Page": {}, "Article": {"body": html}}
+    elif re.search(r'\bCatalog\b', itemmeta["itemtype"]):
+        archetype = {"Item": itemmeta, "Page": {"text": html}, "Catalog": catalog_meta}
     else:
         archetype = {"Item": itemmeta, "Page": {"text": html}}
 
