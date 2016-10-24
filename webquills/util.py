@@ -90,7 +90,7 @@ class Schematist(object):
             logger.error("No author found in attributions: %s" % meta.get(
                 "attributions"))
             pass
-        if meta.get("udpated") and meta.get("copyright_holder"):
+        if meta.get("updated") and meta.get("copyright_holder"):
             copyright = "©%s %s" % (meta["updated"][:4],
                                     meta.get("copyright_holder", {}).get("name"))
             meta.setdefault("copyright", copyright)
