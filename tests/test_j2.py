@@ -20,7 +20,8 @@ import webquills.j2 as j2
 def test_templates_from_context():
     context = {
         "Item": {
-            "itemtype": "Item/Page/Article"
+            "itemtype": "Item/Page/Article",
+            "wq_output": ["html"]
             }
         }
     result = j2.templates_from_context(context)

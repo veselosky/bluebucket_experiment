@@ -120,6 +120,12 @@
                 "headline": {"type": "string"}
             }
         },
+        "Catalog": {
+            "type": "object",
+            "properties": {
+                "queries": {"type": "array", "items": {"type": "string"}}
+            }
+        },
         "Index": {
             "type": "object",
             "required": [ "Items" ],

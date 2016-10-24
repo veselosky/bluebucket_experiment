@@ -14,11 +14,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-import jinja2
-import jmespath
 import urllib.parse as uri
 
+import jinja2
+import jmespath
+from pathlib import Path
 from webquills.util import getLogger
+
 
 def jmes(struct, query):
     # Reverses order of arguments for use as filter inside Jinja templates
@@ -29,6 +31,10 @@ def absolute(relative, base):
     return uri.urljoin(base, relative)
 
 
+def with_suffix(filename, suffix):
+    return Path(filename).with_suffix(suffix)
+
+
 def render(config, context, templatename):
     # TODO Hard-coded FSLoader very limiting. Allow other loaders by config.
     # Certainly we will want package loader, possibly S3 loader.
@@ -36,6 +42,7 @@ def render(config, context, templatename):
         loader=jinja2.FileSystemLoader(config["jinja2"]["templatedir"]))
     jinja.filters["jmes"] = jmes
     jinja.filters["absolute"] = absolute
+    jinja.filters["with_suffix"] = with_suffix
     template = jinja.get_or_select_template(templatename)
     return template.render(context)
 
@@ -51,7 +58,9 @@ def templates_from_context(ctx):
     logger = getLogger()
     logger.debug("templates from context: " + repr(pieces))
     while pieces:
-        templates.setdefault("html", []).append("_".join(pieces) + ".html.j2")
+        for extension in ctx["Item"]["wq_output"]:
+            filename = "_".join(pieces) + "." + extension + ".j2"
+            templates.setdefault(extension, []).append(filename)
         pieces.pop()
     # TODO Allow template overrides
     logger.debug("templates from context: " + repr(templates))

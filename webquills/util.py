@@ -57,7 +57,7 @@ class Schematist(object):
 
     def __init__(self, config):
         self.config = config
-        self.root = Path(config["options"].get("root", ""))
+        self.root = Path(config.get("options", {}).get("root", ""))
         schemafile = pkg_resources.resource_filename('webquills.schemas',
                                                      'Item.json')
         with open(schemafile, encoding="utf-8") as f:
@@ -90,9 +90,10 @@ class Schematist(object):
             logger.error("No author found in attributions: %s" % meta.get(
                 "attributions"))
             pass
-        copyright = "©%s %s" % (meta["updated"][:4],
-                                meta.get("copyright_holder", {}).get("name"))
-        meta.setdefault("copyright", copyright)
+        if meta.get("udpated") and meta.get("copyright_holder"):
+            copyright = "©%s %s" % (meta["updated"][:4],
+                                    meta.get("copyright_holder", {}).get("name"))
+            meta.setdefault("copyright", copyright)
 
     def validate(self, struct):
         jsonschema.validate(struct, self.itemschema)  # Raises ValidationError
