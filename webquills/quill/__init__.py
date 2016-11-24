@@ -140,7 +140,9 @@ def main():
                            title=param['TITLE'])
         # Prepare the output file handle
         if param['--outfile']:
-            Path(param["--outfile"]).write_text(doc, encoding=UTF8)
+            dest = Path(param["--outfile"])
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(doc, encoding=UTF8)
         else:
             print(doc)
 

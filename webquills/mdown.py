@@ -53,7 +53,7 @@ def new_markdown(config, item_type, title=None, **kwargs):
     timezone = config.get("site", {}).get("timezone", tzlocal())
     now = arrow.now(timezone).isoformat().replace("+00:00", "Z")
     text = ""
-    metas = OrderedDict(itemtype=item_type, guid=uuid.uuid4())
+    metas = OrderedDict(itemtype=item_type, guid="urn:UUID:" + str(uuid.uuid4()))
     metas.update(kwargs)
     metas.setdefault("created", now)
     metas.setdefault("updated", now)
@@ -63,8 +63,7 @@ def new_markdown(config, item_type, title=None, **kwargs):
         text += category_seo_msg
 
     if title:
-        metas["slug"] = util.slugify(title)
-        metas["title"] = title
+        metas["title"] = '"' + title + '"'
     else:
         text += "\nYou need to set a title. It's a required field!\n"
     # Once again pyyaml is trying to be far too clever and cluttering output,
