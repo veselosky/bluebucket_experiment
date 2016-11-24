@@ -1,4 +1,5 @@
 arrow
+awscli
 colorama
 colorlog
 docopt
