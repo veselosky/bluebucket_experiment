@@ -19,10 +19,12 @@ WebQuills command line interface.
 
 Usage:
     quill new [-o OUTFILE] ITEMTYPE [TITLE]
-    quill build [-r ROOT] [-t DIR] [-s SRCDIR] [-x EXT]...
+    quill build [-r ROOT] [-t DIR] [-s SRCDIR] [--dev]
     quill config [-r ROOT] [-t DIR] [-s SRCDIR] [QUERY]
 
 Options:
+    -- dev                  Development mode. Ignore future publish restriction
+                            and include all items.
     -o --outfile=OUTFILE    File to write output. Defaults to STDOUT.
                             If the destination file exists, it will be
                             overwritten.
@@ -32,7 +34,6 @@ Options:
                             (markdown, etc.)
     -t --templatedir=DIR    Directory where templates are stored. TEMPLATE
                             path should be relative to this.
-    -x --extension=EXT      A python-markdown extension module to load.
 
 """
 import copy
@@ -109,7 +110,8 @@ def main():
         index = arch.load_json(indexfile, default={})
         for file in arch.archetypes_needing_indexing():
             logger.info("Indexing %s" % file)
-            indexer.add_to_index(index, arch.load_json(file))
+            indexer.add_to_index(index, arch.load_json(file),
+                                 include_future=param['--dev'])
         arch.write_json(indexfile, index)
 
         # 4. find any json files needing outputs

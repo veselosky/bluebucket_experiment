@@ -13,14 +13,23 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-#
-def add_to_index(index, *args):
+import arrow
+from webquills import util
+
+
+def add_to_index(index, *args, include_future=False):
+    logger = util.getLogger()
     index.setdefault("Items", {})
-    for input in args:
+    now = arrow.now()
+    for archetype in args:
         # Rather than validate every one against schema, just duck-type
         try:
-            item = input["Item"]
-            index["Items"][item["guid"]]= item
+            item = archetype["Item"]
+            pub_date = arrow.get(item['published'])
+            if not include_future and pub_date > now:
+                logger.info("Skipping %s, future publish at %s" % (item['archetype']['href'], pub_date))
+                continue
+            index["Items"][item["guid"]] = item
         except KeyError:  # ignore inputs that don't conform
             pass
 
