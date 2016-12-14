@@ -53,7 +53,8 @@ def new_markdown(config, item_type, title=None, **kwargs):
     timezone = config.get("site", {}).get("timezone", tzlocal())
     now = arrow.now(timezone).isoformat().replace("+00:00", "Z")
     text = ""
-    metas = OrderedDict(itemtype=item_type, guid="urn:UUID:" + str(uuid.uuid4()))
+    metas = OrderedDict(itemtype=item_type,
+                        guid="urn:UUID:" + str(uuid.uuid4()))
     metas.update(kwargs)
     metas.setdefault("created", now)
     metas.setdefault("updated", now)
@@ -139,7 +140,8 @@ def md2archetype(config, intext: str):
         else:
             itemmeta[key] = value
 
-    itemmeta['published'] = itemmeta.get('published') or itemmeta.get('updated')
+    itemmeta['published'] = itemmeta.get(
+        'published') or itemmeta.get('updated')
     itemmeta['updated'] = itemmeta.get('updated') or itemmeta.get('published')
     # hard coded defaults: markdown typically represents HTML pages
     itemmeta.setdefault("contenttype", "text/html; charset=utf-8")
@@ -148,7 +150,8 @@ def md2archetype(config, intext: str):
     if re.search(r'\bArticle\b', itemmeta["itemtype"]):
         archetype = {"Item": itemmeta, "Page": {}, "Article": {"body": html}}
     elif re.search(r'\bCatalog\b', itemmeta["itemtype"]):
-        archetype = {"Item": itemmeta, "Page": {"text": html}, "Catalog": catalog_meta}
+        archetype = {"Item": itemmeta, "Page": {
+            "text": html}, "Catalog": catalog_meta}
     else:
         archetype = {"Item": itemmeta, "Page": {"text": html}}
 

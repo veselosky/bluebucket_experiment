@@ -86,11 +86,11 @@ def main():
             schema.apply_defaults(archetype, src)
 
             target = schema.root / archetype["Item"]["category"]["label"] / \
-                     archetype["Item"]["slug"]
+                archetype["Item"]["slug"]
             target = target.with_suffix(".json")
             archetype["Item"]["archetype"] = {
                 "href": "/" + str(target.relative_to(arch.root)),
-                "rel":  "wq:archetype"
+                "rel": "wq:archetype"
             }
             archetype["Item"]["source"] = {
                 "href": "/" + str(src.relative_to(arch.root)),
@@ -134,7 +134,8 @@ def main():
                 if extension not in context["Item"]["wq_output"]:
                     continue
                 out = j2.render(cfg, context, templatelist)
-                file.with_suffix('.' + extension).write_text(out, encoding=UTF8)
+                file.with_suffix(
+                    '.' + extension).write_text(out, encoding=UTF8)
 
     elif param['new']:
         # TODO (someday) Prompt user for metadata values

@@ -15,10 +15,11 @@
 #   limitations under the License.
 #
 import urllib.parse as uri
+from pathlib import Path
 
 import jinja2
 import jmespath
-from pathlib import Path
+
 from webquills.util import getLogger
 
 
