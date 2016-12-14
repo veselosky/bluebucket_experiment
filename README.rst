@@ -18,12 +18,10 @@ Features
 
 Install the command line client `quill` to execute commands.
 
-* quill startproject: generate a project makefile and webquills.ini
+* [NOT IMPLEMENTED] quill startproject: generate a project makefile and webquills.ini
 * quill new: create a new markdown file with required metadata
-* quill md2json: convert markdown files to a JSON archetypes
-* quill j2: render a Jinja2 template using the given JSON files as context
-* quill render: render a list of JSON archetypes using auto-selected templates
-* quill index: create a JSON index of the given archetype files
+* quill build: convert markdown to JSON and render templates
+* quill config: read values from webquills.yml (handly for make/shell scripts)
 
 Naming conventions for JSON schemas:
 
