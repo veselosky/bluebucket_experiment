@@ -66,7 +66,8 @@ class Schematist(object):
     def apply_defaults(self, archetype: dict, path: Path) -> dict:
         logger = getLogger()
         meta = archetype["Item"]
-        configured_default = copy.deepcopy(self.config.get("item_defaults", {}))
+        configured_default = copy.deepcopy(
+            self.config.get("item_defaults", {}))
         for key, value in configured_default.items():
             meta.setdefault(key, value)
 
@@ -77,7 +78,6 @@ class Schematist(object):
 
         meta.setdefault("category", default_cat)
         meta.setdefault("slug", str(path.stem))
-        meta.setdefault("wq_output", ["html"])
         meta.setdefault("attributions", [])
         meta.setdefault("links", [])
         # If there is an author, that's the default copyright holder.
@@ -92,8 +92,13 @@ class Schematist(object):
             pass
         if meta.get("updated") and meta.get("copyright_holder"):
             copyright = "©%s %s" % (meta["updated"][:4],
-                                    meta.get("copyright_holder", {}).get("name"))
+                                    meta.get("copyright_holder", {}).get("name")
+                                    )
             meta.setdefault("copyright", copyright)
+
+        # Set defaults for other settings
+        archetype.setdefault("Webquills", {})
+        archetype["Webquills"].setdefault("scribes", ["html"])
 
     def validate(self, struct):
         jsonschema.validate(struct, self.itemschema)  # Raises ValidationError

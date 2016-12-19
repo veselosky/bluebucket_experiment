@@ -26,8 +26,6 @@ from dateutil.parser import parse as parse_date
 from dateutil.tz import tzlocal
 from markdown.extensions.toc import TocExtension
 
-import webquills.util as util
-
 category_seo_msg = '''
 For SEO, please assign a keyword-rich category like "keyword/seo" above.
 It will be used to generate a URL. Category will be inferred from the
@@ -105,12 +103,21 @@ def md2archetype(config, intext: str):
     # Clean the input and check for yaml front matter
     mdtext = intext.strip()
     metadata = {}
+    archetype = {}
     if mdtext.startswith('---'):
         _, yamltext, mdtext = re.split(r'^\.{3,}|-{3,}$', mdtext,
                                        maxsplit=3, flags=re.MULTILINE)
         # YAML parses datetime inconsistently, and incorrectly (loses timezone)
         # Using BaseLoader prevents it from trying to be clever
-        metadata = yaml.load(yamltext, Loader=yaml.BaseLoader)
+        frontmatter = yaml.load(yamltext, Loader=yaml.BaseLoader)
+        if "Item" in frontmatter:
+            # Metadata is in "full" format.
+            metadata = frontmatter.pop("Item")
+            archetype = frontmatter
+        else:
+            # Metadata is in "itemmeta" format
+            metadata = frontmatter
+            metadata.setdefault("itemtype", "Item/Page/Article")
 
     html = md.convert(mdtext)
     # TODO (Someday) Extract headline from the HTML body for meta
@@ -133,10 +140,6 @@ def md2archetype(config, intext: str):
         elif key == 'itemtype':
             itemmeta[key] = string.capwords(value, '/')
 
-        elif key == "queries":
-            # FIXME Should not be hard-coded, but not sure how to configure
-            # Queries belong to Catalog, not Item
-            catalog_meta[key] = value
         else:
             itemmeta[key] = value
 
@@ -147,12 +150,15 @@ def md2archetype(config, intext: str):
     itemmeta.setdefault("contenttype", "text/html; charset=utf-8")
     itemmeta.setdefault("itemtype", "Item/Page")
 
+    archetype["Item"] = itemmeta
+    archetype.setdefault("Page", {})
     if re.search(r'\bArticle\b', itemmeta["itemtype"]):
-        archetype = {"Item": itemmeta, "Page": {}, "Article": {"body": html}}
+        archetype.setdefault("Article", {})
+        archetype["Article"]["body"] = html
     elif re.search(r'\bCatalog\b', itemmeta["itemtype"]):
-        archetype = {"Item": itemmeta, "Page": {
-            "text": html}, "Catalog": catalog_meta}
+        archetype["Page"]["text"] = html
+        archetype.setdefault("Catalog", catalog_meta)
     else:
-        archetype = {"Item": itemmeta, "Page": {"text": html}}
+        archetype["Page"]["text"] = html
 
     return archetype

@@ -19,11 +19,9 @@ import webquills.j2 as j2
 
 def test_templates_from_context():
     context = {
-        "Item": {
-            "itemtype": "Item/Page/Article",
-            "wq_output": ["html"]
-            }
-        }
+        "Item": {"itemtype": "Item/Page/Article"},
+        "Webquills": {"scribes": ["html"]}
+    }
     result = j2.templates_from_context(context)
     assert result == {"html": ["Item_Page_Article.html.j2", "Item_Page.html.j2",
                       "Item.html.j2"]}

@@ -59,7 +59,7 @@ def templates_from_context(ctx):
     logger = getLogger()
     logger.debug("templates from context: " + repr(pieces))
     while pieces:
-        for extension in ctx["Item"]["wq_output"]:
+        for extension in ctx["Webquills"]["scribes"]:
             filename = "_".join(pieces) + "." + extension + ".j2"
             templates.setdefault(extension, []).append(filename)
         pieces.pop()

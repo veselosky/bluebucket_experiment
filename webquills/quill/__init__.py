@@ -131,7 +131,7 @@ def main():
             for extension, templatelist in outputs.items():
                 # Allows items to override output format, or request
                 # additional formats
-                if extension not in context["Item"]["wq_output"]:
+                if extension not in context["Webquills"]["scribes"]:
                     continue
                 out = j2.render(cfg, context, templatelist)
                 file.with_suffix(

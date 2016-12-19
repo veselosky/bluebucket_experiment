@@ -67,8 +67,7 @@
                 "itemtype",
                 "links",
                 "published",
-                "title",
-                "wq_output"
+                "title"
             ],
             "properties": {
                 "archetype": {"$ref": "#/definitions/link"},
@@ -103,8 +102,7 @@
                 "source": {"$ref": "#/definitions/link"},
                 "thumbnail": {"$ref": "#/definitions/link"},
                 "title": {"type": "string"},
-                "updated": {"type": "string", "format": "date-time"},
-                "wq_output": {"type": "array", "items": {"type": "string"}}
+                "updated": {"type": "string", "format": "date-time"}
             }
         },
         "Page": {
@@ -133,6 +131,9 @@
                 "Items": {"type": "object"},
                 "totalResults": {"type": "integer"}
             }
+        },
+        "Webquills": {
+            "scribes": {"type": "array", "items": {"type": "string"}}
         }
     },
     "type": "object",
