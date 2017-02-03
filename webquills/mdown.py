@@ -14,6 +14,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+import datetime
 import re
 import string
 import uuid
@@ -132,7 +133,12 @@ def md2archetype(config, intext: str):
         if key in ['created', 'date', 'published', 'updated']:
             # Because humans are sloppy, we parse and normalize date values.
             # Because we care about timezones, we use arrow, not yaml/datetime.
-            dt = arrow.get(parse_date(value), zone)
+            # We want unspecified timezones to default to local, but to honor
+            # any zone specified.
+            default_datetime = arrow.now(zone).replace(hour=0, minute=0,
+                                                       second=0,
+                                                       microsecond=0).datetime
+            dt = arrow.get(parse_date(value, default=default_datetime))
             if key == 'date':  # Legacy DC.date, convert to specific
                 key = 'published'
             itemmeta[key] = dt.isoformat().replace("+00:00", "Z")

@@ -34,6 +34,7 @@ Options:
                             (markdown, etc.)
     -t --templatedir=DIR    Directory where templates are stored. TEMPLATE
                             path should be relative to this.
+    -v --verbose            Verbose logging
 
 """
 import copy
@@ -69,10 +70,10 @@ def configure(args):
 
 # MAIN: Dispatch to individual handlers
 def main():
-    logger = util.getLogger()
-    item_types = {"article": "Item/Page/Article", "page": "Item/Page"}
     param = docopt(__doc__)
     cfg = configure(param)
+    logger = util.getLogger(cfg)
+    item_types = {"article": "Item/Page/Article", "page": "Item/Page"}
     arch = LocalArchivist(cfg)
     schema = util.Schematist(cfg)
 
@@ -102,6 +103,7 @@ def main():
             except jsonschema.ValidationError as e:
                 logger.info(str(e))
                 logger.error("%s: %s at %s" % (src, e.message, e.path))
+                logger.debug(archetype)
                 continue
             arch.write_json(target, archetype)
 

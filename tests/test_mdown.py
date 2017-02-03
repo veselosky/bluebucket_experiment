@@ -52,7 +52,7 @@ Attributions:
 - role: author
   name: Vince Veselosky
 Copyright: 2016 Vince Veselosky
-Published: 2016-09-29T18:00:00
+Published: 2016-09-29T18:00:00-0700
 Title: A Test Article
 ...
 Testing 1
@@ -66,7 +66,7 @@ Itemtype: Item/Page/Article
 GUID: 25cf55b5-345e-48e3-86ae-bc6c186f0fb1
 Created: 2016-09-27T15:35:38
 Published: 28 Sept 2016
-Updated: 2016-09-29T18:00:00
+Updated: 2016-09-29T18:00:00-0700
 Copyright: 2016 Vince Veselosky
 Attributions:
 - role: author
@@ -109,6 +109,8 @@ def test_md2archetype_required_meta():
     S = util.Schematist(config)
     S.apply_defaults(testdata, archetype)
     testdata["Item"]["archetype"] = {"href": str(archetype)}
+    testdata["Item"]["published"] = "2016-09-29T18:00:00-07:00"
+    testdata["Item"]["updated"] = "2016-09-29T18:00:00-07:00"
 
     # raises ValidationError if not valid
     jsonschema.validate(testdata, schema)
@@ -123,6 +125,6 @@ def test_md2archetype_override_defaults():
 
     # raises ValidationError if not valid
     jsonschema.validate(testdata, schema)
-    assert testdata['Item']['updated'] == "2016-09-29T18:00:00-04:00"
+    assert testdata['Item']['updated'] == "2016-09-29T18:00:00-07:00"
     assert testdata['Item']['published'] == "2016-09-28T00:00:00-04:00"
     assert testdata['Item']['slug'] == "i-made-this-up"

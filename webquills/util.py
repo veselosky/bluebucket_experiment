@@ -109,9 +109,12 @@ class Schematist(object):
 logger = None
 
 
-def getLogger():
-    # TODO get verbosity from params
+def getLogger(cfg=None):
     global logger
+    cfg = cfg or {}
+    level = logging.INFO
+    if "verbose" in cfg:
+        level = logging.DEBUG
     if logger is None:
         handler = colorlog.StreamHandler()
         handler.setFormatter(colorlog.ColoredFormatter(
@@ -121,7 +124,7 @@ def getLogger():
             }, ))
         logger = colorlog.getLogger('webquills')
         logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(level)
     return logger
 
 
