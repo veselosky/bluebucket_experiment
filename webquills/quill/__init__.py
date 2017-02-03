@@ -86,6 +86,8 @@ def main():
             archetype = md2archetype(cfg, src.read_text(encoding=UTF8))
             schema.apply_defaults(archetype, src)
 
+            # FIXME Because done before validation, category may not be right
+            # type. Gives confusing error message.
             target = schema.root / archetype["Item"]["category"]["label"] / \
                 archetype["Item"]["slug"]
             target = target.with_suffix(".json")

@@ -51,6 +51,7 @@ class LocalArchivist(object):
             return True
 
     def write_text(self, path: Path, text: str):
+        path.parent.mkdir(parents=True, exists_ok=True)
         return path.write_text(text, encoding=UTF8)
 
     def write_json(self, path: Path, struct: dict, pretty=False):
@@ -58,6 +59,7 @@ class LocalArchivist(object):
         if pretty:
             args.update({"indent": 2, "sort_keys": True})
 
+        path.parent.mkdir(parents=True, exist_ok=True)
         return path.write_text(json.dumps(struct, **args), encoding=UTF8)
 
     def gather_sources(self):

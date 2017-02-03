@@ -107,7 +107,7 @@ def md2archetype(config, intext: str):
     archetype = {}
     if mdtext.startswith('---'):
         _, yamltext, mdtext = re.split(r'^\.{3,}|-{3,}$', mdtext,
-                                       maxsplit=3, flags=re.MULTILINE)
+                                       maxsplit=2, flags=re.MULTILINE)
         # YAML parses datetime inconsistently, and incorrectly (loses timezone)
         # Using BaseLoader prevents it from trying to be clever
         frontmatter = yaml.load(yamltext, Loader=yaml.BaseLoader)
