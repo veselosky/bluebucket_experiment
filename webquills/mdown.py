@@ -37,6 +37,14 @@ Url: <90 characters (category + slug)
 Description: <160 characters
 '''
 
+catalog_preamble = """
+Webquills:
+    scribes: [html, atom]
+Catalog:
+    queries:
+        - "* | [?starts_with(itemtype, `Item/Page/Article`)]| reverse(sort_by(@, &updated))"
+""".strip()
+
 md = None
 
 
@@ -69,8 +77,11 @@ def new_markdown(config, item_type, title=None, **kwargs):
     # Once again pyyaml is trying to be far too clever and cluttering output,
     # so we do this the old fashioned way. -VV 2016-10-23
     out = "---\n"
+    out += "Item:\n"
     for key, value in metas.items():
-        out += "%s: %s\n" % (key, value)
+        out += "    %s: %s\n" % (key, value)
+    if item_type.startswith("Item/Page/Catalog"):
+        out += catalog_preamble + "\n"
     out += "...\n"
     out += text
     return out

@@ -73,7 +73,11 @@ def main():
     param = docopt(__doc__)
     cfg = configure(param)
     logger = util.getLogger(cfg)
-    item_types = {"article": "Item/Page/Article", "page": "Item/Page"}
+    item_types = {
+        "article": "Item/Page/Article",
+        "page": "Item/Page",
+        "catalog": "Item/Page/Catalog"
+    }
     arch = LocalArchivist(cfg)
     schema = util.Schematist(cfg)
 
