@@ -53,7 +53,7 @@ def new_markdown(config, item_type, title=None, **kwargs):
     now = arrow.now(timezone).isoformat().replace("+00:00", "Z")
     text = ""
     metas = OrderedDict(itemtype=item_type,
-                        guid="urn:UUID:" + str(uuid.uuid4()))
+                        guid='"urn:UUID:' + str(uuid.uuid4()) + '"')
     metas.update(kwargs)
     metas.setdefault("created", now)
     metas.setdefault("updated", now)
