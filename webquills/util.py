@@ -112,8 +112,9 @@ logger = None
 def getLogger(cfg=None):
     global logger
     cfg = cfg or {}
+    options = cfg.get("options", {})
     level = logging.INFO
-    if "verbose" in cfg:
+    if "verbose" in options:
         level = logging.DEBUG
     if logger is None:
         handler = colorlog.StreamHandler()
