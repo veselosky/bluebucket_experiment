@@ -19,11 +19,11 @@ WebQuills command line interface.
 
 Usage:
     quill new [-o OUTFILE] ITEMTYPE [TITLE]
-    quill build [-r ROOT] [-t DIR] [-s SRCDIR] [--dev]
-    quill config [-r ROOT] [-t DIR] [-s SRCDIR] [QUERY]
+    quill build [-v] [-r ROOT] [-t DIR] [-s SRCDIR] [--dev]
+    quill config [-v] [QUERY]
 
 Options:
-    -- dev                  Development mode. Ignore future publish restriction
+    --dev                   Development mode. Ignore future publish restriction
                             and include all items.
     -o --outfile=OUTFILE    File to write output. Defaults to STDOUT.
                             If the destination file exists, it will be
