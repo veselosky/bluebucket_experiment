@@ -20,6 +20,7 @@ WebQuills command line interface.
 Usage:
     quill new [-o OUTFILE] ITEMTYPE [TITLE]
     quill build [-v] [-r ROOT] [-t DIR] [-s SRCDIR] [--dev]
+    quill putS3redirects [-v] [-r ROOT] REDIR_FILE
     quill config [-v] [QUERY]
 
 Options:
@@ -40,6 +41,7 @@ Options:
 import copy
 from pathlib import Path
 
+import boto3
 import jmespath
 import jsonschema
 import webquills.indexer as indexer
@@ -163,3 +165,17 @@ def main():
             out = repr(jmespath.search(param["QUERY"], cfg))
         out = out.strip().strip('"\'')
         print(out)
+
+    elif param["putS3redirects"]:
+        out = repr(cfg)
+        if not cfg["root"].startswith("s3"):
+            logger.error("Root is not an S3 bucket!")
+            exit(1)
+        with open(param["REDIR_FILE"]) as f:
+            redirs = yaml.load(f, Loader=yaml.BaseLoader)
+        s3 = boto3.client('s3')
+        for redir in redirs["redirects"]:
+            s3.put_object(Bucket=cfg["options"]["root"],
+                          Key=redir["from"],
+                          WebSiteRedirect=redir["to"]
+                          )
