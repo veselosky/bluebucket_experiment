@@ -33,3 +33,33 @@ def test_item_schema_is_valid():
 
     # raises ValidationError if not valid
     jsonschema.validate(testjson, schema)
+
+
+def test_config_schema_is_valid():
+    schemafile = pkg_resources.resource_filename('webquills.schemas',
+                                                 'metaschema.json')
+    with open(schemafile, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    testfile = pkg_resources.resource_filename('webquills.schemas',
+                                               'Config.json')
+    with open(testfile, encoding='utf-8') as f:
+        testjson = json.load(f)
+
+    # raises ValidationError if not valid
+    jsonschema.validate(testjson, schema)
+
+
+def test_config_example_is_valid():
+    schemafile = pkg_resources.resource_filename('webquills.schemas',
+                                                 'Config.json')
+    with open(schemafile, encoding="utf-8") as f:
+        schema = json.load(f)
+
+    testfile = pkg_resources.resource_filename('webquills.schemas',
+                                               'Config.example.json')
+    with open(testfile, encoding='utf-8') as f:
+        testjson = json.load(f)
+
+    # raises ValidationError if not valid
+    jsonschema.validate(testjson, schema)

@@ -1,0 +1,190 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "definitions": {
+        "spectator": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "The URL, ARN, or other identifier."
+                },
+                "name": {
+                    "type": "string",
+                    "description": "A human readable name for the spectator."
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "lambda",
+                        "SQS",
+                        "SNS"
+                    ]
+                },
+                "visibility": {
+                    "description": "With the default value of 'public', the spectator will only be notified of events affecting publicly visible items (ACL=public-read). If visibility=private, the spectator will be notified of events on unpublished files too.",
+                    "type": "string",
+                    "enum": [
+                        "private",
+                        "public"
+                    ],
+                    "default": "public"
+                }
+            }
+        },
+        "link": {
+            "description": "Link as defined by RFC 5988, extended for S3",
+            "type": "object",
+            "required": [
+                "href"
+            ],
+            "properties": {
+                "bucket": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "href": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "hreflang": {
+                    "type": "string"
+                },
+                "rel": {
+                    "type": "string"
+                },
+                "rev": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "type": "object",
+    "required": [
+        "site"
+    ],
+    "properties": {
+        "integrations": {
+            "description": "Configuration for any plugins.",
+            "type": "object",
+            "additionalProperties": {
+                "type": "object"
+            }
+        },
+        "itemtypes": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "description": "Item types describe 'valid' kinds of things that can be stored in the archive. The object is keyed by the extension (including leading '.') that identifies the type.",
+                "properties": {
+                    "default": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "example": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "validators": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "type"
+                            ],
+                            "properties": {
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "jsonschema"
+                                    ]
+                                },
+                                "href": {
+                                    "type": "string",
+                                    "format": "uri",
+                                    "description": "The URL of the schema."
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "site": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "description": "The base URL of the site. Used to create self-referencing URLs.",
+                    "type": "string",
+                    "format": "uri"
+                }
+            }
+        },
+        "spectators": {
+            "type": "object",
+            "description": "The spectator structure stores 'subscriptions', destinations that will be notified when an object matching the 'watch' pattern changes. The object is keyed by the watch spec, which makes it relatively cheap to look up all spectators for a given event.",
+            "properties": {
+                "basename": {
+                    "description": "The file name, excluding the path and all extensions.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                },
+                "category": {
+                    "description": "Any directory component of the path (do not include slashes).",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                },
+                "extension": {
+                    "description": "One of the file name extensions. If the file has only one extension, this is the same as 'extension'. If it has multiple extensions (e.g. '.en.html'), this will match against them individually (e.g. '.en' or '.html'). MUST begin with a dot.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                },
+                "extensions": {
+                    "description": "The full file name extension from the first dot. If the file has multiple extensions, this must match them all, in order (e.g. '.en.html'). To match one of multiple extensions, see extension. MUST begin with a dot.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                },
+                "key": {
+                    "description": "The full path name of the file, including the directory path and all extensions. MUST begin with slash.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                },
+                "name": {
+                    "description": "The full path name of the file, excluding all extensions. MUST begin with slash.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                },
+                "prefix": {
+                    "description": "The leading directory path of the file name. MUST include leading and trailing slashes.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/spectator"
+                    }
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

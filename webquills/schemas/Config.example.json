@@ -1,0 +1,31 @@
+{
+    "site": {
+        "title": "",
+        "url": "https://vince.veselosky.me"
+    },
+    "integrations": {
+        "google_analytics": {
+            "id": "UA-642116-10"
+        }
+    },
+    "itemtypes": {
+        ".itempage": {
+            "validators": [
+                {
+                    "type": "jsonschema",
+                    "href": "https://raw.githubusercontent.com/veselosky/webquills/awsomepub/webquills/schemas/Item.json"
+                }
+            ]
+        }
+    },
+    "spectators": {
+        "extension": {
+            ".itempage": {
+                "type": "lambda",
+                "id": "ARN:...",
+                "name": "itempage to html",
+                "visibility": "private"
+            }
+        }
+    }
+}
