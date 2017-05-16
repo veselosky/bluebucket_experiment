@@ -1,5 +1,6 @@
 arrow
 awscli
+boto3
 colorama
 colorlog
 docopt

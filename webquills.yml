@@ -27,5 +27,16 @@ site:
   - name: Vince Veselosky
     role: author
   copyright: "Copyright 2016 Vince Veselosky"
-  disqus_shortname: webquills
-  google_analytics_id: "UA-642116-5"
+
+itemtypes:
+  ".itempage":
+    validators:
+      - type: "jsonschema"
+        href: "https://raw.githubusercontent.com/veselosky/webquills/awsomepub/webquills/schemas/Item.json"
+
+
+integrations:
+  disqus:
+    shortname: webquills
+  google_analytics:
+    id: "UA-642116-5"

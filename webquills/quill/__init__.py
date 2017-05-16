@@ -19,9 +19,8 @@ WebQuills command line interface.
 
 Usage:
     quill new [-o OUTFILE] ITEMTYPE [TITLE]
-    quill build [-v] [-r ROOT] [-t DIR] [-s SRCDIR] [--dev]
     quill putS3redirects [-v] [-r ROOT] REDIR_FILE
-    quill config [-v] [QUERY]
+    quill config [-v] (new|QUERY)
 
 Options:
     --dev                   Development mode. Ignore future publish restriction
@@ -31,24 +30,16 @@ Options:
                             overwritten.
     -r --root=ROOT          The destination build directory. All calculated
                             paths will be relative to this directory.
-    -s --source=SRCDIR      The directory from which to read source files
-                            (markdown, etc.)
-    -t --templatedir=DIR    Directory where templates are stored. TEMPLATE
-                            path should be relative to this.
     -v --verbose            Verbose logging
 
 """
-import copy
 from pathlib import Path
 
 import boto3
 import jmespath
-import jsonschema
-import webquills.indexer as indexer
-import webquills.j2 as j2
 import yaml
 from docopt import docopt
-from webquills.localfs import LocalArchivist
+# from webquills.localfs import LocalArchivist
 from webquills.mdown import md2archetype, new_markdown
 import webquills.util as util
 
@@ -56,14 +47,54 @@ import webquills.util as util
 UTF8 = "utf-8"
 
 
-def configure(args):
-    with open("webquills.yml") as f:
-        cfg = yaml.load(f, Loader=yaml.BaseLoader)
-    cfg.setdefault("markdown", {})
-    cfg.setdefault("jinja2", {})
-    cfg.setdefault("options", {})
-    cfg.setdefault("site", {})
+def find_config():
+    "Locate a webquills.yml file."
+    here = Path.cwd()
+    found = None
+    while not found:
+        target = here / "webquills.yml"
+        if target.exists():
+            found = target
+            break
+        elif here == here.parent:  # reached the top
+            break
+        else:
+            here = here.parent
+    return found
 
+
+def config_defaults(cfg=None):
+    cfg = cfg or {}
+    cfg.setdefault("markdown", {})
+    cfg.setdefault("jinja2", {})  # TODO Delete?
+    cfg.setdefault("options", {})
+    cfg.setdefault("site", {"url": "YOUR SITE BASE URL HERE"})
+    cfg.setdefault("itemtypes", {})
+    cfg.setdefault("integrations", {})
+    cfg.setdefault("spectators", {})
+    return cfg
+
+
+def load_config(configfile=None):
+    configfile = configfile or find_config()
+    if not configfile:
+        return config_defaults()
+    try:
+        with Path(configfile).open() as f:
+            cfg = yaml.load(f, Loader=yaml.BaseLoader)
+    except FileNotFoundError:
+        cfg = {}
+    return config_defaults(cfg)
+
+
+def write_config(cfg, dest):
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(yaml.dump(cfg), encoding=UTF8)
+
+
+def configure(args, configfile=None):
+    cfg = load_config(configfile)
     for key, value in args.items():
         if key.startswith("--") and value is not None:
             cfg["options"][key[2:]] = value
@@ -73,81 +104,23 @@ def configure(args):
 # MAIN: Dispatch to individual handlers
 def main():
     param = docopt(__doc__)
-    cfg = configure(param)
+    # TODO check param for explicit configfile
+    configfile = find_config()
+    if not configfile:
+        answer = input("webqullls.yml not found. Create now? [Yes/No]")
+        if answer.lower().startswith("y"):
+            write_config(config_defaults(), "webquills.yml")
+    cfg = configure(param, configfile)
     logger = util.getLogger(cfg)
     item_types = {
         "article": "Item/Page/Article",
         "page": "Item/Page",
         "catalog": "Item/Page/Catalog"
     }
-    arch = LocalArchivist(cfg)
-    schema = util.Schematist(cfg)
+    # arch = LocalArchivist(cfg)
+    # schema = util.Schematist(cfg)
 
-    if param["build"]:
-        # 1. cp any files from srcdir needing update to root
-        arch.gather_sources()
-        # 2. find root sources needing JSON; md2json them
-        for src in arch.sources_needing_update():
-            logger.info("Updating source: %s" % src)
-            archetype = md2archetype(cfg, src.read_text(encoding=UTF8))
-            schema.apply_defaults(archetype, src)
-
-            # FIXME Because done before validation, category may not be right
-            # type. Gives confusing error message.
-            target = schema.root / archetype["Item"]["category"]["label"] / \
-                archetype["Item"]["slug"]
-            target = target.with_suffix(".json")
-            archetype["Item"]["archetype"] = {
-                "href": "/" + str(target.relative_to(arch.root)),
-                "rel": "wq:archetype"
-            }
-            archetype["Item"]["source"] = {
-                "href": "/" + str(src.relative_to(arch.root)),
-                "rel": "wq:source"
-            }
-
-            try:
-                schema.validate(archetype)
-            except jsonschema.ValidationError as e:
-                logger.info(str(e))
-                logger.error("%s: %s at %s" % (src, e.message, e.path))
-                logger.debug(archetype)
-                continue
-            arch.write_json(target, archetype)
-
-        # 3. find json files needing indexing; index them
-        indexfile = arch.root / "_index.json"
-        index = arch.load_json(indexfile, default={})
-        for file in arch.archetypes_needing_indexing():
-            logger.info("Indexing %s" % file)
-            indexer.add_to_index(index, arch.load_json(file),
-                                 include_future=param['--dev'])
-        arch.write_json(indexfile, index)
-
-        # 4. find any json files needing outputs
-        base_context = copy.deepcopy(cfg)
-        for file in arch.archetypes_needing_render():
-            logger.info("Rendering %s" % file)
-            item = arch.load_json(file)
-            if "Item" not in item:
-                logger.warning("Skipping non-Item JSON file: %s" % file)
-                continue
-            context = copy.deepcopy(base_context)
-            context.update(item)
-            if item["Item"]["itemtype"].startswith("Item/Page/Catalog"):
-                context["Index"] = index
-
-            outputs = j2.templates_from_context(context)
-            for extension, templatelist in outputs.items():
-                # Allows items to override output format, or request
-                # additional formats
-                if extension not in context["Webquills"]["scribes"]:
-                    continue
-                out = j2.render(cfg, context, templatelist)
-                file.with_suffix(
-                    '.' + extension).write_text(out, encoding=UTF8)
-
-    elif param['new']:
+    if param['new']:
         # TODO (someday) Prompt user for metadata values
         doc = new_markdown(cfg, item_types[param['ITEMTYPE'].lower()],
                            title=param['TITLE'])
