@@ -1,11 +1,9 @@
-arrow
-awscli
 boto3
-colorama
 colorlog
 docopt
-jsonschema
+jinja2_s3loader
 jmespath
+jsonschema
 markdown
 pyembed
 pyembed-markdown
