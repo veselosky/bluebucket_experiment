@@ -81,7 +81,7 @@ def main():
         if param['--outfile']:
             dest = Path(param["--outfile"])
             dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(doc, encoding=UTF8)
+            dest.write_text(doc, encoding="utf_8")
         else:
             print(doc)
 
@@ -106,5 +106,5 @@ def main():
                            WebSiteRedirect=redir["to"]
                            )
     elif param["setup"]:
-        bucket = s3.Bucket(param["BUCKET"])
+        bucket = s3.Bucket(param["BUCKET"], config=cfg)
         bucket.init()
