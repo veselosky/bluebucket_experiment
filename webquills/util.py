@@ -16,17 +16,19 @@
 #
 import copy
 import datetime
-import logging
 import json
+import logging
+import mimetypes
 from gzip import GzipFile
 from io import BytesIO
+from pathlib import Path
 
 import colorlog
 import jmespath
 import jsonschema
 import pkg_resources
 import slugify as sluglib
-from pathlib import Path
+import yaml
 
 
 class SmartJSONEncoder(json.JSONEncoder):
@@ -129,6 +131,19 @@ def getLogger(cfg=None):
     return logger
 
 
+def guess_type(self, key):
+    "Returns a MIME type"
+    contenttype = "application/octet-stream"
+    if not mimetypes.inited:
+        mimetypes.init()
+    (attempt, gz) = mimetypes.guess_type(key, strict=False)
+    if attempt is None and gz == "gzip":
+        contenttype = "application/gzip"
+    elif attempt:
+        contenttype = attempt
+    return contenttype
+
+
 def gzip(content, filename=None, compresslevel=9, mtime=None):
     gzbuffer = BytesIO()
     gz = GzipFile(filename, 'wb', compresslevel, gzbuffer, mtime)
@@ -155,3 +170,53 @@ default_stopwords = ['a', 'an', 'and', 'as', 'but', 'for', 'in', 'is', 'of',
 
 def slugify(instring, stopwords=default_stopwords):
     return sluglib.slugify(instring, stopwords=stopwords)
+
+
+##################################
+# Manipulating local config file
+##################################
+
+def find_config():
+    "Locate a webquills.yml file."
+    here = Path.cwd()
+    found = None
+    while not found:
+        target = here / "webquills.yml"
+        if target.exists():
+            found = target
+            break
+        elif here == here.parent:  # reached the top
+            break
+        else:
+            here = here.parent
+    return found
+
+
+def config_defaults(cfg=None):
+    cfg = cfg or {}
+    cfg.setdefault("markdown", {})
+    cfg.setdefault("jinja2", {})  # TODO Delete?
+    cfg.setdefault("options", {})
+    cfg.setdefault("site", {"url": "YOUR SITE BASE URL HERE"})
+    cfg.setdefault("itemtypes", {})
+    cfg.setdefault("integrations", {})
+    cfg.setdefault("spectators", {})
+    return cfg
+
+
+def load_config(configfile=None):
+    configfile = configfile or find_config()
+    if not configfile:
+        return config_defaults()
+    try:
+        with Path(configfile).open() as f:
+            cfg = yaml.load(f, Loader=yaml.BaseLoader)
+    except FileNotFoundError:
+        cfg = {}
+    return config_defaults(cfg)
+
+
+def write_config(cfg, dest):
+    dest = Path(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(yaml.dump(cfg), encoding=UTF8)
