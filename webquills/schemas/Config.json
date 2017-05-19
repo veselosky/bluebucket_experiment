@@ -3,6 +3,10 @@
     "definitions": {
         "spectator": {
             "type": "object",
+            "required": [
+                "id",
+                "type"
+            ],
             "properties": {
                 "id": {
                     "type": "string",
@@ -29,6 +33,12 @@
                     ],
                     "default": "public"
                 }
+            }
+        },
+        "spectatorlist": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/spectator"
             }
         },
         "link": {
@@ -138,49 +148,49 @@
                     "description": "The file name, excluding the path and all extensions.",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 },
                 "category": {
                     "description": "Any directory component of the path (do not include slashes).",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 },
                 "extension": {
                     "description": "One of the file name extensions. If the file has only one extension, this is the same as 'extension'. If it has multiple extensions (e.g. '.en.html'), this will match against them individually (e.g. '.en' or '.html'). MUST begin with a dot.",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 },
                 "extensions": {
                     "description": "The full file name extension from the first dot. If the file has multiple extensions, this must match them all, in order (e.g. '.en.html'). To match one of multiple extensions, see extension. MUST begin with a dot.",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 },
                 "key": {
-                    "description": "The full path name of the file, including the directory path and all extensions. MUST begin with slash.",
+                    "description": "The full path name of the file, including the directory path and all extensions.",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 },
                 "name": {
-                    "description": "The full path name of the file, excluding all extensions. MUST begin with slash.",
+                    "description": "The full path name of the file, excluding all extensions.",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 },
                 "prefix": {
-                    "description": "The leading directory path of the file name. MUST include leading and trailing slashes.",
+                    "description": "The leading directory path of the file name.",
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/spectator"
+                        "$ref": "#/definitions/spectatorlist"
                     }
                 }
             },

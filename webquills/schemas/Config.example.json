@@ -19,13 +19,90 @@
         }
     },
     "spectators": {
+        "basename": {
+            "example": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "basename = example"
+                }
+            ]
+        },
+        "category": {
+            "cat1": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "category = cat1"
+                }
+            ],
+            "cat2": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "category = cat2"
+                }
+            ]
+        },
         "extension": {
-            ".itempage": {
-                "type": "lambda",
-                "id": "ARN:...",
-                "name": "itempage to html",
-                "visibility": "private"
-            }
+            ".itempage": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "extenstion = .itempage",
+                    "visibility": "private"
+                }
+            ],
+            ".json": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "extenstion = .json"
+                }
+            ]
+        },
+        "extensions": {
+            ".itempage.json": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "extenstions = .itempage.json"
+                }
+            ]
+        },
+        "key": {
+            "cat1/cat2/example.itempage.json": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "key = cat1/cat2/example.itempage.json"
+                }
+            ]
+        },
+        "name": {
+            "cat1/cat2/example": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "name = cat1/cat2/example"
+                }
+            ]
+        },
+        "prefix": {
+            "cat1": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "prefix = cat1"
+                }
+            ],
+            "cat1/cat2": [
+                {
+                    "type": "lambda",
+                    "id": "ARN:...",
+                    "name": "prefix = cat1/cat2"
+                }
+            ]
         }
     }
 }
