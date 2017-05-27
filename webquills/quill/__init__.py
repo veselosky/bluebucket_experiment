@@ -22,6 +22,7 @@ Usage:
     quill putS3redirects [-v] [-r ROOT] REDIR_FILE
     quill config [-v] (new|QUERY)
     quill setup [-v] BUCKET
+    quill upgrade [-v] BUCKET
 
 Options:
     --dev                   Development mode. Ignore future publish restriction
@@ -108,3 +109,7 @@ def main():
     elif param["setup"]:
         bucket = s3.Bucket(param["BUCKET"], config=cfg)
         bucket.init()
+
+    elif param["upgrade"]:
+        bucket = s3.Bucket(param["BUCKET"], config=cfg)
+        bucket.make_lambdas(upgrade=True)

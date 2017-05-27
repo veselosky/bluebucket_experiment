@@ -13,6 +13,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+#
 
-# Imported here because Lambda can only accept one dot in a func name
-from webquills.lambdas.archivechanged import archive_changed  # noqa
+
