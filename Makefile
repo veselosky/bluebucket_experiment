@@ -10,6 +10,7 @@ webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
 endef
 export BROWSER_PYSCRIPT
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
+VERSION = `python setup.py --version`
 
 help:
 	@echo "clean - remove all build, test, coverage and Python artifacts"
@@ -24,6 +25,7 @@ help:
 	@echo "release - package and upload a release"
 	@echo "dist - package"
 	@echo "install - install the package to the active Python's site-packages"
+	@echo "VERSION: $(VERSION)"
 
 clean: clean-build clean-pyc clean-test
 
@@ -68,14 +70,34 @@ docs:
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
 
-release: clean
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+release: clean dist
+	# TODO twine python setup.py bdist_wheel upload
 
-dist: clean
+dist: dist/lambda-archivechanged.zip
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
 
 install: clean
-	python setup.py install
+	python setup.py develop
+
+dist/lambda-archivechanged.zip:
+	mkdir -p build/archivechanged
+	mkdir -p dist
+	pip install -t build/archivechanged/ .
+	rm -rf build/archivechanged/*.dist-info build/archivechanged/*.egg-info
+	# boto3 is provided by Lambda, so do not package it or its deps
+	rm -rf build/archivechanged/boto3 build/archivechanged/botocore
+	rm -rf build/archivechanged/jmespath build/archivechanged/docutils
+	rm -rf build/archivechanged/s3transfer build/archivechanged/dateutil
+	# shaves ~1MB, but how much time cost to recompile?
+	find ./build/archivechanged -name '*.pyc' -exec rm -f {} +
+	find . -name '__pycache__' -exec rm -fr {} +
+	cd build/archivechanged/ && zip -r ../../dist/lambda-archivechanged.zip *
+
+public: dist
+	aws s3 cp --acl public-read --recursive dist s3://dist.webquills.net/$(VERSION)/
+
+awsinstall: public
+	quill setup dist.webquills.net
+	quill upgrade dist.webquills.net
