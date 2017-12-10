@@ -421,11 +421,16 @@ class S3event(object):
 
 def parse_aws_event(message, **kwargs):
     logger = logging.getLogger(__name__)
-    eventlist = message['Records']
+    if "Records" in message:
+        eventlist = message['Records']
+    else:
+        eventlist = [message]
     events = []
     for event in eventlist:
         if 'eventSource' in event and event['eventSource'] == 'aws:s3':
             events.append(S3event(event))
+
+        # Note the difference in case. Ugh.
         elif "EventSource" in event and event['EventSource'] == "aws:sns":
             try:
                 unwrapped = json.loads(event['Sns']['Message'])
@@ -436,6 +441,17 @@ def parse_aws_event(message, **kwargs):
             for ev in ev_list:
                 if 'eventSource' in ev and ev['eventSource'] == 'aws:s3':
                     events.append(S3event(ev))
+
+        elif "queryStringParameters" in event:
+            # Not a reactive event, but a proactive command
+            try:
+                unwrapped = json.loads(event["body"])
+                event["body"] = unwrapped
+                event["eventSource"] = "aws:apigateway"
+                events.append(event)
+            except Exception:
+                logger.error(json.dumps(event))
+                raise
         else:
             # Event from elsewhere. Log it.
             logger.warn("Unrecognized event message:\n%s" %
@@ -443,4 +459,3 @@ def parse_aws_event(message, **kwargs):
             return []
 
     return events
-

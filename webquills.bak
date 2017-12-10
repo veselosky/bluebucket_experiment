@@ -1,0 +1,42 @@
+options:
+  root: build/html
+  source: content
+
+environments:
+  local:
+    root: build/html
+    source: content
+  production:
+    root: "s3://www.webquills.net"
+
+
+jinja2:
+  templatedir: themes/posh/templates
+
+item_defaults:
+  license: https://creativecommons.org/licenses/by-nc-nd/4.0/
+  attributions:
+  - name: Vince Veselosky
+    role: author
+
+site:
+  title: "Webquills: Content management systems for digital media"
+  description: Need a great description!
+  base: http://www.webquills.net
+  attributions:
+  - name: Vince Veselosky
+    role: author
+  copyright: "Copyright 2016 Vince Veselosky"
+
+itemtypes:
+  ".itempage":
+    validators:
+      - type: "jsonschema"
+        href: "https://raw.githubusercontent.com/veselosky/webquills/awsomepub/webquills/schemas/Item.json"
+
+
+integrations:
+  disqus:
+    shortname: webquills
+  google_analytics:
+    id: "UA-642116-5"

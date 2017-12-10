@@ -54,3 +54,10 @@ def test_parse_sns_event():
 
     assert len(result) == 1
     assert type(result[0]) == S3event
+
+
+def test_parse_api_gateway_event():
+    message = stubs.api_gateway_proxy_event
+    result = parse_aws_event(message)
+
+    assert result[0]["body"]["test"] == "body"

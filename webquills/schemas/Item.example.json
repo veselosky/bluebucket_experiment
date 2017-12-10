@@ -1,0 +1,16 @@
+{
+    "$schema": "https://raw.githubusercontent.com/veselosky/webquills/awsomepub/webquills/schemas/Item.json",
+    "Item": {
+        "contenttype": "text/html; charset=utf-8",
+        "copyright": {
+            "holder": {
+                "name": "Vince Veselosky",
+                "email": "vince@control-escape.com"
+            }
+        },
+        "description": "An example of a page.",
+        "guid": "tag:www.webquills.net,2017-05-27:exampleItemPage",
+        "itemtype": "Item/Page",
+        "title": "Example Item Page"
+    }
+}
